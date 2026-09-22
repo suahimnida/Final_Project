@@ -23,8 +23,8 @@ OUT_HOSTS = os.path.join(BUILD_DIR, "hosts.json")
 def normalize(raw_url: str) -> str:
     """URL 정규화: 프로토콜과 끝 슬래시를 제거하고 소문자로 통일한다."""
     u = raw_url.strip()
-    u = re.sub(r"^https?://", "", u, flags=re.I)  # http://, https:// 제거
-    u = u.rstrip("/")                               # 끝 슬래시 제거
+    u = re.sub(r"^https?://", "", u, flags=re.I)
+    u = u.rstrip("/")
     return u.lower()
 
 
@@ -39,7 +39,7 @@ def main():
 
     with open(INPUT_CSV, encoding="utf-8-sig") as f:
         reader = csv.reader(f)
-        next(reader)  # 헤더(날짜, 홈페이지주소) 건너뛰기
+        next(reader)
 
         for row in reader:
             if len(row) < 2 or not row[1].strip():
