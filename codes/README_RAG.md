@@ -34,6 +34,16 @@ python build_vector_store.py --input features_output.csv --index-dir vector_stor
 ```
 * 여기서 좀 매우 많이 오래걸렸어요.....한 30분 정도 걸린거 같습니다..;;;;
 
+시간 지체로 인해 빠른 확인을 희망하시는 경우
+Ctrl + C를 하여 중단하신 후 아래의 명령어를 따라 실행해주시고
+오래 걸려도 데이터베이스가 모두 구축 되기까지 기다리실 경우에는 아래의 내용은 무시하고
+4 단계로 넘어가주세요
+```
+python -c "import pandas as pd; df = pd.read_csv('features_output.csv');
+df.sample(20000, random_state=42).to_csv('features_sample.csv', index=False)"
+python build_vector_store.py --input features_sample.csv --index-dir vector_store
+```
+
 ### 4) Anthropic API 키 설정
 
 ```bash
