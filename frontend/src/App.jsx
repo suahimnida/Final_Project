@@ -108,8 +108,11 @@ const handleViewHistory = (item) => {
 
         <main className="main-content">
           {currentPage === "home" && (
-            <Home onAnalyze={handleAnalyze} />
-          )}
+  <Home
+    onAnalyze={handleAnalyze}
+    onOpenHistory={() => setCurrentPage("history")}
+  />
+)}
 
           {currentPage === "analysis" && (
             <Analysis

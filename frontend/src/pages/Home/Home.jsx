@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import "./Home.css";
 
-function Home({ onAnalyze }) {
+function Home({ onAnalyze, onOpenHistory }) {
   const [url, setUrl] = useState("");
   const [recentHistory, setRecentHistory] = useState([]);
 
@@ -128,10 +128,13 @@ function Home({ onAnalyze }) {
             <h3>최근 분석</h3>
           </div>
 
-          <button className="recent-more-button">
-            전체 보기
-            <span>→</span>
-          </button>
+          <button
+  className="recent-more-button"
+  onClick={onOpenHistory}
+>
+  전체 보기
+  <span>→</span>
+</button>
         </div>
 
         {recentHistory.length === 0 ? (

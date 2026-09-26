@@ -1,9 +1,8 @@
 import { useEffect, useState } from "react";
 import "./History.css";
 
-function Home({ onAnalyze }) {
-  const [url, setUrl] = useState("");
-  const [recentHistory, setRecentHistory] = useState([]);
+function History({ onViewResult }) {
+  const [history, setHistory] = useState([]);
 
   useEffect(() => {
     const savedHistory = localStorage.getItem(
@@ -12,18 +11,15 @@ function Home({ onAnalyze }) {
 
     if (savedHistory) {
       try {
-        const history = JSON.parse(savedHistory);
-        setRecentHistory(history.slice(0, 3));
+        setHistory(JSON.parse(savedHistory));
       } catch (error) {
         console.error(
-          "최근 분석 기록을 불러오지 못했습니다:",
+          "분석 기록을 불러오지 못했습니다:",
           error
         );
       }
     }
   }, []);
-
-  // 이하 기존 코드...
 
   const handleDelete = (id) => {
     const updatedHistory = history.filter(
@@ -145,3 +141,4 @@ function Home({ onAnalyze }) {
 }
 
 export default History;
+

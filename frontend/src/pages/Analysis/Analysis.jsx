@@ -160,13 +160,15 @@ function Analysis({ url, onComplete }) {
       </div>
     )}
 
-    <button
-      className="partial-result-button"
-      onClick={() => onComplete(null)}
-    >
-      현재 결과 보기
-      <span>→</span>
-    </button>
+    {!error && (
+  <button
+    className="partial-result-button"
+    onClick={() => onComplete(null)}
+  >
+    현재 결과 보기
+    <span>→</span>
+  </button>
+)}
   </section>
 );
 }
