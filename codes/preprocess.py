@@ -7,8 +7,6 @@
 
 사용법:
     python preprocess.py --input PhiUSIIL_Phishing_URL_Dataset.csv --output features_output.csv
-
-작성자: 성주 (AI 개발자)
 """
 
 import argparse
