@@ -152,8 +152,26 @@ def normalize_label(value) -> int:
     raise ValueError(f"알 수 없는 라벨 값: {value}")
 
 
+def resolve_column(df: pd.DataFrame, col_name: str) -> str:
+    """대소문자를 구분하지 않고 실제 컬럼명을 찾아 반환한다.
+    'url' 요청 시 데이터셋에 'URL'이 있어도 찾아준다."""
+    if col_name in df.columns:
+        return col_name
+    lower_map = {c.lower(): c for c in df.columns}
+    if col_name.lower() in lower_map:
+        return lower_map[col_name.lower()]
+    raise KeyError(
+        f"'{col_name}' 컬럼을 찾을 수 없습니다. "
+        f"실제 컬럼 목록: {df.columns.tolist()}"
+    )
+
+
 def clean_dataframe(df: pd.DataFrame, url_col: str, label_col: str) -> pd.DataFrame:
     """결측치 제거, 중복 URL 제거, 라벨 정규화."""
+    # 대소문자 구분 없이 실제 컬럼명을 찾음 (예: url_col='url' -> 실제 'URL' 컬럼 사용)
+    url_col = resolve_column(df, url_col)
+    label_col = resolve_column(df, label_col)
+
     df = df[[url_col, label_col]].copy()
     df.columns = ["url", "label"]
 
@@ -183,8 +201,8 @@ def main():
     parser = argparse.ArgumentParser(description="피싱 URL 데이터 정제 및 특징 추출")
     parser.add_argument("--input", required=True, help="원본 데이터셋 CSV 경로")
     parser.add_argument("--output", default="features_output.csv", help="출력 CSV 경로")
-    parser.add_argument("--url-col", default="url", help="원본 데이터의 URL 컬럼명")
-    parser.add_argument("--label-col", default="label", help="원본 데이터의 라벨 컬럼명")
+    parser.add_argument("--url-col", default="url", help="원본 데이터의 URL 컬럼명 (대소문자 무관 자동 매칭)")
+    parser.add_argument("--label-col", default="label", help="원본 데이터의 라벨 컬럼명 (대소문자 무관 자동 매칭)")
     parser.add_argument(
         "--invert-label",
         action="store_true",
