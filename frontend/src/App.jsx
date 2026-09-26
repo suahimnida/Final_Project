@@ -9,15 +9,18 @@ import "./App.css";
 function App() {
   const [currentPage, setCurrentPage] = useState("home");
   const [targetUrl, setTargetUrl] = useState("");
+  const [analysisResult, setAnalysisResult] = useState(null);
 
   const handleAnalyze = (url) => {
     setTargetUrl(url);
     setCurrentPage("analysis");
   };
 
-  const handleAnalysisComplete = () => {
-    setCurrentPage("result");
-  };
+ 
+const handleAnalysisComplete = (result) => {
+  setAnalysisResult(result);
+  setCurrentPage("result");
+};
 
   return (
     <div className="app">
@@ -92,7 +95,10 @@ function App() {
           )}
 
           {currentPage === "result" && (
-            <Result url={targetUrl} />
+            <Result
+              url={targetUrl}
+             result={analysisResult}
+            />
           )}
 
           {currentPage === "history" && <History />}
