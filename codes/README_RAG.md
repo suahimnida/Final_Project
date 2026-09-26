@@ -6,12 +6,12 @@
 
 ## 파일 구성
 
-- `preprocess.py` (기존 파일) — URL 특징 추출 / 데이터 정제
-- `build_vector_store.py` (신규) — 특징 CSV → FAISS 벡터 스토어 생성
-- `rag_app.py` (신규) — FastAPI 웹 서비스 (RAG 판정 API)
-- `requirements.txt` (신규) — 필요 패키지 목록
+- `preprocess.py`: URL 특징 추출 / 데이터 정제
+- `build_vector_store.py`: 특징 CSV → FAISS 벡터 스토어 생성
+- `rag_app.py`: FastAPI 웹 서비스 (RAG 판정 API)
+- `requirements.txt`: 필요 패키지 목록
 
-**주의**: `rag_app.py`가 `preprocess.py`를 import하므로, 반드시 두 파일을 같은 폴더에 두세요.
+**주의**: phiusiil+phishing+url+dataset.zip 을 다운받아 나머지 파일들과 같은 위치에 압축해제하여 아래의 방법을 따라서 실행
 
 ## 실행 순서
 
@@ -27,24 +27,17 @@ pip install -r requirements.txt --break-system-packages
 python preprocess.py --input PhiUSIIL_Phishing_URL_Dataset.csv --output features_output.csv --invert-label
 ```
 
-> UCI PHIUSIIL 원본 데이터를 쓴다면 라벨 방향이 반대이므로 `--invert-label` 옵션을 꼭 확인하세요.
-
 ### 3) 벡터 스토어 구축
 
 ```bash
 python build_vector_store.py --input features_output.csv --index-dir vector_store
 ```
-
-첫 실행 시 `sentence-transformers` 임베딩 모델(약 90MB)을 자동으로 다운로드합니다.
+* 여기서 좀 매우 많이 오래걸렸어요.....한 30분 정도 걸린거 같습니다..;;;;
 
 ### 4) Anthropic API 키 설정
 
 ```bash
-# Windows (PowerShell)
-$env:ANTHROPIC_API_KEY="sk-ant-..."
-
-# macOS / Linux
-export ANTHROPIC_API_KEY="sk-ant-..."
+$env:ANTHROPIC_API_KEY="sk-ant-(개인 디코 메시지로 보낸 API 키)"
 ```
 
 ### 5) 웹 서비스 실행
@@ -85,9 +78,3 @@ curl -X POST http://localhost:8000/check \
 4. **생성(Generation)**: 검색된 사례들을 근거로 Claude에게 "이 URL이 피싱인지 정상인지, 왜 그런지"를 JSON 형식으로 요청
 5. 판정 결과 + 근거 + 검색된 유사 사례를 함께 JSON으로 반환 → 웹 프론트엔드에서 그대로 표시 가능
 
-## 커스터마이징 팁
-
-- **검색 개수(K) 조정**: 환경변수 `RAG_TOP_K` (기본값 5)
-- **인덱스 폴더 위치**: 환경변수 `RAG_INDEX_DIR` (기본값 `vector_store`)
-- **더 빠른 응답이 필요하면**: `ask_claude_for_verdict()` 호출을 생략하고, 검색된 유사 사례의 라벨 다수결(majority vote)만으로 1차 판정 후, 애매한 경우에만 Claude를 호출하는 방식으로 바꿀 수 있습니다.
-- **데이터가 업데이트될 때**: `build_vector_store.py`를 다시 실행해 인덱스를 재생성하면 됩니다 (서비스는 재시작 필요).
