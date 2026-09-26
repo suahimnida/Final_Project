@@ -6,10 +6,15 @@
 
 import uuid
 from contextlib import asynccontextmanager
+from pathlib import Path
 
+from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, Query
 
-from app import db
+# backend/.env의 값을 환경변수로 읽어온다 (이미 설정된 환경변수가 우선)
+load_dotenv(Path(__file__).resolve().parents[1] / ".env")
+
+from app import db  # noqa: E402
 from app.schemas import (
     AnalysisListResponse,
     AnalysisRequest,
@@ -24,6 +29,7 @@ async def lifespan(app: FastAPI):
     # 첫 요청이 느려지지 않도록 서버 시작 시 블랙리스트를 미리 로드
     blacklist.load_blacklist()
     db.init_db()
+    rag.load_rag()
     yield
 
 
