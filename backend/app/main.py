@@ -7,9 +7,15 @@
 import uuid
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException, Query
 
-from app.schemas import AnalysisRequest, AnalysisResponse, HealthResponse
+from app import db
+from app.schemas import (
+    AnalysisListResponse,
+    AnalysisRequest,
+    AnalysisResponse,
+    HealthResponse,
+)
 from app.services import blacklist, model, rag
 
 
@@ -17,6 +23,7 @@ from app.services import blacklist, model, rag
 async def lifespan(app: FastAPI):
     # 첫 요청이 느려지지 않도록 서버 시작 시 블랙리스트를 미리 로드
     blacklist.load_blacklist()
+    db.init_db()
     yield
 
 
@@ -30,7 +37,7 @@ def health():
 
 @app.post("/api/v1/analyses", response_model=AnalysisResponse)
 def create_analysis(request: AnalysisRequest):
-    return AnalysisResponse(
+    result = AnalysisResponse(
         analysis_id=str(uuid.uuid4()),
         status="completed",
         url=request.url,
@@ -38,3 +45,18 @@ def create_analysis(request: AnalysisRequest):
         model=model.predict(request.url),
         rag=rag.explain(request.url),
     )
+    db.save_analysis(result)
+    return result
+
+
+@app.get("/api/v1/analyses", response_model=AnalysisListResponse)
+def list_analyses(limit: int = Query(20, ge=1, le=100)):
+    return AnalysisListResponse(items=db.list_analyses(limit))
+
+
+@app.get("/api/v1/analyses/{analysis_id}", response_model=AnalysisResponse)
+def read_analysis(analysis_id: str):
+    result = db.get_analysis(analysis_id)
+    if result is None:
+        raise HTTPException(status_code=404, detail="분석 결과를 찾을 수 없습니다.")
+    return result

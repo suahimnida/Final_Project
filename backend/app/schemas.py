@@ -49,5 +49,15 @@ class AnalysisResponse(BaseModel):
     rag: RagResult
 
 
+class AnalysisSummary(BaseModel):
+    analysis_id: str
+    url: str
+    created_at: str
+
+
+class AnalysisListResponse(BaseModel):
+    items: list[AnalysisSummary]
+
+
 class HealthResponse(BaseModel):
     status: str
