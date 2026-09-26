@@ -5,14 +5,14 @@ function Header() {
         <div className="logo-mark">P</div>
 
         <div>
-          <h1>PHISHING ANALYZER</h1>
-          <span>AI Security Analysis</span>
+          <h1>피싱 사이트 분석기</h1>
+          <span>AI 보안 분석</span>
         </div>
       </div>
 
       <div className="header-status">
         <span className="status-dot"></span>
-        System Online
+        시스템 정상
       </div>
     </header>
   );

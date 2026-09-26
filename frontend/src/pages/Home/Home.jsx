@@ -1,66 +1,100 @@
+import { useState } from "react";
 import "./Home.css";
 
-function Home() {
+function Home({ onAnalyze }) {
+  const [url, setUrl] = useState("");
+
+  const handleSubmit = () => {
+    const trimmedUrl = url.trim();
+
+    if (!trimmedUrl) {
+      return;
+    }
+
+    onAnalyze(trimmedUrl);
+  };
+
+  const handleKeyDown = (event) => {
+    if (event.key === "Enter") {
+      handleSubmit();
+    }
+  };
+
   return (
     <section className="home">
       <div className="home-header">
-        <p className="eyebrow">AI-POWERED WEB SECURITY</p>
+        <p className="eyebrow">AI 기반 웹 보안 분석</p>
 
         <h2>
-          Is this website
+          이 웹사이트,
           <br />
-          <span>safe?</span>
+          <span>안전할까요?</span>
         </h2>
 
         <p className="home-description">
-          Analyze a URL with multiple security signals and AI-powered analysis.
+          URL을 입력하면 다양한 보안 지표와 AI 분석을 통해
+          피싱 위험 여부를 확인할 수 있습니다.
         </p>
       </div>
 
       <div className="url-card">
-        <div className="url-card-label">URL ANALYSIS</div>
+        <div className="url-card-label">URL 분석</div>
 
         <div className="url-input-row">
           <input
             type="text"
+            value={url}
+            onChange={(event) => setUrl(event.target.value)}
+            onKeyDown={handleKeyDown}
             placeholder="https://example.com"
           />
 
-          <button className="analyze-button">
-            Analyze
+          <button
+            className="analyze-button"
+            onClick={handleSubmit}
+            disabled={!url.trim()}
+          >
+            분석하기
             <span>→</span>
           </button>
         </div>
 
         <p className="input-help">
-          Enter the URL you want to analyze for potential phishing threats.
+          분석하려는 웹사이트의 URL을 입력해주세요.
         </p>
       </div>
 
       <div className="feature-grid">
         <div className="feature-card">
           <span className="feature-number">01</span>
-          <h3>URL Analysis</h3>
+
+          <h3>URL 분석</h3>
+
           <p>
-            URL structure, length, character patterns and entropy analysis.
+            URL의 길이, 문자 패턴, 엔트로피 및 n-gram을
+            분석합니다.
           </p>
         </div>
 
         <div className="feature-card">
           <span className="feature-number">02</span>
-          <h3>AI Detection</h3>
+
+          <h3>AI 탐지</h3>
+
           <p>
-            AI Agent combines multiple analysis results to identify suspicious
-            behavior.
+            AI Agent가 여러 분석 결과를 종합하여
+            의심스러운 특성을 판단합니다.
           </p>
         </div>
 
         <div className="feature-card">
           <span className="feature-number">03</span>
-          <h3>Web Analysis</h3>
+
+          <h3>웹페이지 분석</h3>
+
           <p>
-            HTML, text and visual elements can be analyzed for additional
-            signals.
+            HTML, 텍스트 및 이미지 요소를 분석하여
+            추가적인 위험 신호를 확인합니다.
           </p>
         </div>
       </div>

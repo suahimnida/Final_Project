@@ -2,11 +2,22 @@ import { useState } from "react";
 import Header from "./components/Header/Header";
 import Home from "./pages/Home/Home";
 import Analysis from "./pages/Analysis/Analysis";
+import Result from "./pages/Result/Result";
 import History from "./pages/History/History";
 import "./App.css";
 
 function App() {
   const [currentPage, setCurrentPage] = useState("home");
+  const [targetUrl, setTargetUrl] = useState("");
+
+  const handleAnalyze = (url) => {
+    setTargetUrl(url);
+    setCurrentPage("analysis");
+  };
+
+  const handleAnalysisComplete = () => {
+    setCurrentPage("result");
+  };
 
   return (
     <div className="app">
@@ -15,7 +26,7 @@ function App() {
       <div className="layout">
         <aside className="sidebar">
           <div className="sidebar-section">
-            <p className="sidebar-label">MAIN</p>
+            <p className="sidebar-label">메인</p>
 
             <button
               className={`sidebar-item ${
@@ -24,7 +35,7 @@ function App() {
               onClick={() => setCurrentPage("home")}
             >
               <span>⌂</span>
-              Dashboard
+              대시보드
             </button>
 
             <button
@@ -49,7 +60,7 @@ function App() {
           </div>
 
           <div className="sidebar-section">
-            <p className="sidebar-label">PROJECT</p>
+            <p className="sidebar-label">프로젝트</p>
 
             <button className="sidebar-item">
               <span>◈</span>
@@ -69,8 +80,21 @@ function App() {
         </aside>
 
         <main className="main-content">
-          {currentPage === "home" && <Home />}
-          {currentPage === "analysis" && <Analysis />}
+          {currentPage === "home" && (
+            <Home onAnalyze={handleAnalyze} />
+          )}
+
+          {currentPage === "analysis" && (
+            <Analysis
+              url={targetUrl}
+              onComplete={handleAnalysisComplete}
+            />
+          )}
+
+          {currentPage === "result" && (
+            <Result url={targetUrl} />
+          )}
+
           {currentPage === "history" && <History />}
         </main>
       </div>
