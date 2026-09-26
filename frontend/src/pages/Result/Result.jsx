@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import "./Result.css";
 
 const mockResult = {
@@ -85,6 +86,45 @@ function Result({ url, result }) {
     ...mockResult,
     url: url || mockResult.url,
   };
+
+  useEffect(() => {
+  const historyItem = {
+    id: Date.now(),
+    url: data.url,
+    analyzedAt: new Date().toISOString(),
+    result: data,
+  };
+
+  const savedHistory = localStorage.getItem(
+    "phishingAnalysisHistory"
+  );
+
+  let history = [];
+
+  if (savedHistory) {
+    try {
+      history = JSON.parse(savedHistory);
+    } catch (error) {
+      console.error("분석 기록을 불러오지 못했습니다:", error);
+    }
+  }
+
+  // 같은 URL을 바로 다시 저장하는 것을 방지
+  const alreadyExists = history.some(
+    (item) =>
+      item.url === historyItem.url &&
+      item.result?.risk_score === historyItem.result?.risk_score
+  );
+
+  if (!alreadyExists) {
+    const updatedHistory = [historyItem, ...history];
+
+    localStorage.setItem(
+      "phishingAnalysisHistory",
+      JSON.stringify(updatedHistory)
+    );
+  }
+}, [data.url, data.risk_score]);
 
   const riskLevelText = {
     high: "높은 위험도",

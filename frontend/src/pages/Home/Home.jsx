@@ -1,8 +1,27 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import "./Home.css";
 
 function Home({ onAnalyze }) {
   const [url, setUrl] = useState("");
+  const [recentHistory, setRecentHistory] = useState([]);
+
+  useEffect(() => {
+    const savedHistory = localStorage.getItem(
+      "phishingAnalysisHistory"
+    );
+
+    if (savedHistory) {
+      try {
+        const history = JSON.parse(savedHistory);
+        setRecentHistory(history.slice(0, 3));
+      } catch (error) {
+        console.error(
+          "최근 분석 기록을 불러오지 못했습니다:",
+          error
+        );
+      }
+    }
+  }, []);
 
   const handleSubmit = () => {
     const trimmedUrl = url.trim();
@@ -97,6 +116,63 @@ function Home({ onAnalyze }) {
             추가적인 위험 신호를 확인합니다.
           </p>
         </div>
+      </div>
+
+      <div className="recent-analysis">
+        <div className="recent-analysis-header">
+          <div>
+            <p className="recent-eyebrow">
+              RECENT ANALYSIS
+            </p>
+
+            <h3>최근 분석</h3>
+          </div>
+
+          <button className="recent-more-button">
+            전체 보기
+            <span>→</span>
+          </button>
+        </div>
+
+        {recentHistory.length === 0 ? (
+          <div className="recent-empty">
+            아직 분석한 기록이 없습니다.
+          </div>
+        ) : (
+          <div className="recent-list">
+            {recentHistory.map((item) => {
+              const isPhishing =
+                item.result?.risk_level === "high";
+
+              return (
+                <div
+                  className="recent-item"
+                  key={item.id}
+                >
+                  <div className="recent-item-main">
+                    <span
+                      className={`recent-status ${
+                        isPhishing ? "danger" : "normal"
+                      }`}
+                    >
+                      {isPhishing
+                        ? "피싱 의심"
+                        : "정상"}
+                    </span>
+
+                    <p>{item.url}</p>
+                  </div>
+
+                  <span className="recent-date">
+                    {new Date(
+                      item.analyzedAt
+                    ).toLocaleDateString("ko-KR")}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
     </section>
   );
