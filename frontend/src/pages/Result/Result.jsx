@@ -3,7 +3,7 @@ import "./Result.css";
 
 const mockResult = {
   url: "https://example.com",
-  status: "partial",
+  status: "completed",
 
   risk_score: 87,
   risk_level: "high",
@@ -41,10 +41,15 @@ const mockResult = {
   },
 
   rag: {
-    matched: true,
-    source: "KISA 피싱사이트 데이터",
-    evidence:
+    summary:
       "해당 URL과 유사한 피싱 사례가 확인되었습니다.",
+    references: [
+      {
+        url: "https://example.com",
+        label: 1,
+        similarity: 0.91,
+      },
+    ],
   },
 };
 
@@ -88,43 +93,47 @@ function Result({ url, result }) {
   };
 
   useEffect(() => {
-  const historyItem = {
-    id: Date.now(),
-    url: data.url,
-    analyzedAt: new Date().toISOString(),
-    result: data,
-  };
+    const historyItem = {
+      id: Date.now(),
+      url: data.url,
+      analyzedAt: new Date().toISOString(),
+      result: data,
+    };
 
-  const savedHistory = localStorage.getItem(
-    "phishingAnalysisHistory"
-  );
-
-  let history = [];
-
-  if (savedHistory) {
-    try {
-      history = JSON.parse(savedHistory);
-    } catch (error) {
-      console.error("분석 기록을 불러오지 못했습니다:", error);
-    }
-  }
-
-  // 같은 URL을 바로 다시 저장하는 것을 방지
-  const alreadyExists = history.some(
-    (item) =>
-      item.url === historyItem.url &&
-      item.result?.risk_score === historyItem.result?.risk_score
-  );
-
-  if (!alreadyExists) {
-    const updatedHistory = [historyItem, ...history];
-
-    localStorage.setItem(
-      "phishingAnalysisHistory",
-      JSON.stringify(updatedHistory)
+    const savedHistory = localStorage.getItem(
+      "phishingAnalysisHistory"
     );
-  }
-}, [data.url, data.risk_score]);
+
+    let history = [];
+
+    if (savedHistory) {
+      try {
+        history = JSON.parse(savedHistory);
+      } catch (error) {
+        console.error(
+          "분석 기록을 불러오지 못했습니다:",
+          error
+        );
+      }
+    }
+
+    // 같은 URL과 위험도를 가진 결과를 바로 다시 저장하는 것을 방지
+    const alreadyExists = history.some(
+      (item) =>
+        item.url === historyItem.url &&
+        item.result?.risk_score ===
+          historyItem.result?.risk_score
+    );
+
+    if (!alreadyExists) {
+      const updatedHistory = [historyItem, ...history];
+
+      localStorage.setItem(
+        "phishingAnalysisHistory",
+        JSON.stringify(updatedHistory)
+      );
+    }
+  }, [data.url, data.risk_score]);
 
   const riskLevelText = {
     high: "높은 위험도",
@@ -132,7 +141,8 @@ function Result({ url, result }) {
     low: "낮은 위험도",
   };
 
-  const completedCount = data.completed_steps?.length || 0;
+  const completedCount =
+    data.completed_steps?.length || 0;
 
   return (
     <section className="result-page">
@@ -154,7 +164,9 @@ function Result({ url, result }) {
             분석 대상 URL
           </p>
 
-          <p className="result-target-url">{data.url}</p>
+          <p className="result-target-url">
+            {data.url}
+          </p>
         </div>
 
         <span className="result-completed">
@@ -172,13 +184,17 @@ function Result({ url, result }) {
               {data.risk_score}
             </span>
 
-            <span className="score-total"> / 100</span>
+            <span className="score-total">
+              {" "}
+              / 100
+            </span>
           </div>
         </div>
 
         <div className="risk-info">
           <p className="risk-label">
-            {riskLevelText[data.risk_level] || "분석 결과"}
+            {riskLevelText[data.risk_level] ||
+              "분석 결과"}
           </p>
 
           <h3>
@@ -204,7 +220,9 @@ function Result({ url, result }) {
           </div>
 
           <span>
-            {completedCount} / {Object.keys(data.detections).length} 분석 완료
+            {completedCount} /{" "}
+            {Object.keys(data.detections).length}{" "}
+            분석 완료
           </span>
         </div>
 
@@ -225,7 +243,9 @@ function Result({ url, result }) {
                   key={key}
                 >
                   <div>
-                    <h4>{info?.title || key}</h4>
+                    <h4>
+                      {info?.title || key}
+                    </h4>
 
                     <p>
                       {info?.description ||
@@ -234,8 +254,9 @@ function Result({ url, result }) {
                   </div>
 
                   <span>
-                    {detectionStatusLabels[status] ||
-                      status}
+                    {detectionStatusLabels[
+                      status
+                    ] || status}
                   </span>
                 </div>
               );
@@ -375,7 +396,9 @@ function Result({ url, result }) {
 
         <div className="assistant-card">
           <div className="assistant-header">
-            <div className="assistant-icon">AI</div>
+            <div className="assistant-icon">
+              AI
+            </div>
 
             <div>
               <h3>보안 분석 도우미</h3>
@@ -437,3 +460,4 @@ function Result({ url, result }) {
 }
 
 export default Result;
+

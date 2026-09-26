@@ -9,15 +9,21 @@ function History({ onViewResult }) {
       "phishingAnalysisHistory"
     );
 
-    if (savedHistory) {
-      try {
-        setHistory(JSON.parse(savedHistory));
-      } catch (error) {
-        console.error(
-          "분석 기록을 불러오지 못했습니다:",
-          error
-        );
+    if (!savedHistory) {
+      return;
+    }
+
+    try {
+      const parsedHistory = JSON.parse(savedHistory);
+
+      if (Array.isArray(parsedHistory)) {
+        setHistory(parsedHistory);
       }
+    } catch (error) {
+      console.error(
+        "분석 기록을 불러오지 못했습니다:",
+        error
+      );
     }
   }, []);
 
@@ -35,17 +41,46 @@ function History({ onViewResult }) {
   };
 
   const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleString("ko-KR", {
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
+    if (!dateString) {
+      return "-";
+    }
+
+    return new Date(dateString).toLocaleString(
+      "ko-KR",
+      {
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+      }
+    );
+  };
+
+  const getRiskStatus = (result) => {
+    if (result?.risk_level === "high") {
+      return {
+        label: "피싱 의심",
+        className: "danger",
+      };
+    }
+
+    if (result?.risk_level === "medium") {
+      return {
+        label: "주의 필요",
+        className: "warning",
+      };
+    }
+
+    return {
+      label: "정상",
+      className: "normal",
+    };
   };
 
   return (
     <section className="history-page">
+      {/* Header */}
       <div className="history-header">
         <div>
           <p className="history-eyebrow">
@@ -65,9 +100,12 @@ function History({ onViewResult }) {
         </div>
       </div>
 
+      {/* Empty */}
       {history.length === 0 ? (
         <div className="history-empty">
-          <div className="history-empty-icon">◷</div>
+          <div className="history-empty-icon">
+            ◷
+          </div>
 
           <h3>분석 기록이 없습니다.</h3>
 
@@ -78,10 +116,12 @@ function History({ onViewResult }) {
           </p>
         </div>
       ) : (
+        /* History List */
         <div className="history-list">
           {history.map((item) => {
-            const isPhishing =
-              item.result?.risk_level === "high";
+            const riskStatus = getRiskStatus(
+              item.result
+            );
 
             return (
               <article
@@ -89,15 +129,12 @@ function History({ onViewResult }) {
                 key={item.id}
               >
                 <div className="history-card-main">
+                  {/* Status / Date */}
                   <div className="history-card-top">
                     <span
-                      className={`history-status ${
-                        isPhishing ? "danger" : "normal"
-                      }`}
+                      className={`history-status ${riskStatus.className}`}
                     >
-                      {isPhishing
-                        ? "피싱 의심"
-                        : "정상"}
+                      {riskStatus.label}
                     </span>
 
                     <span className="history-date">
@@ -105,18 +142,23 @@ function History({ onViewResult }) {
                     </span>
                   </div>
 
+                  {/* URL */}
                   <h3>{item.url}</h3>
 
+                  {/* Summary */}
                   <p>
                     {item.result?.ai_analysis?.summary ||
                       "분석 결과를 확인할 수 있습니다."}
                   </p>
                 </div>
 
+                {/* Actions */}
                 <div className="history-card-actions">
                   <button
                     className="history-view-button"
-                    onClick={() => onViewResult(item)}
+                    onClick={() =>
+                      onViewResult(item)
+                    }
                   >
                     결과 보기
                     <span>→</span>
