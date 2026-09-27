@@ -29,7 +29,7 @@ const analysisSteps = [
   },
 ];
 
-function Analysis({ url, onComplete }) {
+function Analysis({ url, isPublic, onComplete }) {
   const [currentStep, setCurrentStep] = useState(0);
   const [error, setError] = useState("");
 
@@ -40,7 +40,7 @@ function Analysis({ url, onComplete }) {
       try {
         setError("");
 
-        const result = await analyzeUrl(url);
+        const result = await analyzeUrl(url, isPublic);
 
         if (!cancelled) {
           onComplete(result);
@@ -61,7 +61,7 @@ function Analysis({ url, onComplete }) {
     return () => {
       cancelled = true;
     };
-  }, [url, onComplete]);
+  }, [url, isPublic, onComplete]);
 
   useEffect(() => {
     if (error) {

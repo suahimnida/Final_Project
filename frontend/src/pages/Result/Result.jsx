@@ -2,11 +2,49 @@ import { useEffect } from "react";
 import "./Result.css";
 
 const mockResult = {
+  id: "8d210232-8d4e-4fe6-98ad-d5e79e65b036",
+
   url: "https://example.com",
   status: "completed",
 
-  risk_score: 87,
-  risk_level: "high",
+  blacklist: {
+    matched: true,
+    match_type: "exact_url",
+    source: "KISA 2024",
+  },
+
+  model: {
+    status: "not_connected",
+    risk_score: null,
+    label: null,
+  },
+
+  rag: {
+    extracted_features: {
+      url_length: "suspicious",
+      character_pattern: "suspicious",
+      entropy: "normal",
+      ngram: "suspicious",
+    },
+
+    similar_cases: [
+      {
+        url: "https://example.com",
+        similarity: 0.91,
+      },
+    ],
+
+    ai_analysis: {
+      summary:
+        "URL 구조와 분석된 특징을 종합했을 때 피싱 사이트와 유사한 특성이 확인되었습니다.",
+
+      reasons: [
+        "URL 길이가 비정상적으로 깁니다.",
+        "의심스러운 문자 패턴이 발견되었습니다.",
+        "유사한 피싱 사례가 확인되었습니다.",
+      ],
+    },
+  },
 
   completed_steps: [
     "url",
@@ -14,43 +52,6 @@ const mockResult = {
     "domain",
     "html",
   ],
-
-  detections: {
-    url_length: "suspicious",
-    character_pattern: "suspicious",
-    entropy: "normal",
-    ngram: "suspicious",
-    html: "suspicious",
-    image: "not_analyzed",
-  },
-
-  web_analysis: {
-    title: "의심스러운 로그인 페이지",
-    text: "페이지 콘텐츠에서 의심스러운 요소가 확인되었습니다.",
-    image: "normal",
-  },
-
-  ai_analysis: {
-    summary:
-      "URL 구조와 HTML 분석에서 여러 의심스러운 특성이 발견되었습니다.",
-    reasons: [
-      "URL 길이가 비정상적으로 깁니다.",
-      "의심스러운 문자 패턴이 발견되었습니다.",
-      "HTML 구조에서 의심스러운 요소가 발견되었습니다.",
-    ],
-  },
-
-  rag: {
-    summary:
-      "해당 URL과 유사한 피싱 사례가 확인되었습니다.",
-    references: [
-      {
-        url: "https://example.com",
-        label: 1,
-        similarity: 0.91,
-      },
-    ],
-  },
 };
 
 const detectionLabels = {
@@ -70,14 +71,6 @@ const detectionLabels = {
     title: "n-gram",
     description: "의심스러운 문자열 조합 빈도 분석",
   },
-  html: {
-    title: "HTML 구조",
-    description: "DOM 구조 및 의심스러운 요소 분석",
-  },
-  image: {
-    title: "페이지 이미지",
-    description: "페이지 이미지의 피싱 관련 시각적 특징 분석",
-  },
 };
 
 const detectionStatusLabels = {
@@ -91,6 +84,16 @@ function Result({ url, result }) {
     ...mockResult,
     url: url || mockResult.url,
   };
+
+  const features = data.rag?.extracted_features || {};
+
+  const aiAnalysis = data.rag?.ai_analysis;
+
+  const completedCount =
+    data.completed_steps?.length || 0;
+
+  const detectionEntries =
+    Object.entries(features);
 
   useEffect(() => {
     const historyItem = {
@@ -117,32 +120,22 @@ function Result({ url, result }) {
       }
     }
 
-    // 같은 URL과 위험도를 가진 결과를 바로 다시 저장하는 것을 방지
     const alreadyExists = history.some(
-      (item) =>
-        item.url === historyItem.url &&
-        item.result?.risk_score ===
-          historyItem.result?.risk_score
+      (item) => item.url === historyItem.url
     );
 
     if (!alreadyExists) {
-      const updatedHistory = [historyItem, ...history];
+      const updatedHistory = [
+        historyItem,
+        ...history,
+      ];
 
       localStorage.setItem(
         "phishingAnalysisHistory",
         JSON.stringify(updatedHistory)
       );
     }
-  }, [data.url, data.risk_score]);
-
-  const riskLevelText = {
-    high: "높은 위험도",
-    medium: "주의 필요",
-    low: "낮은 위험도",
-  };
-
-  const completedCount =
-    data.completed_steps?.length || 0;
+  }, [data.url]);
 
   return (
     <section className="result-page">
@@ -176,38 +169,40 @@ function Result({ url, result }) {
         </span>
       </div>
 
-      {/* Risk */}
+      {/* Blacklist */}
       <div className="risk-card">
         <div className="risk-score">
           <div>
             <span className="score-number">
-              {data.risk_score}
-            </span>
-
-            <span className="score-total">
-              {" "}
-              / 100
+              {data.blacklist?.matched
+                ? "주의"
+                : "확인"}
             </span>
           </div>
         </div>
 
         <div className="risk-info">
           <p className="risk-label">
-            {riskLevelText[data.risk_level] ||
-              "분석 결과"}
+            {data.blacklist?.matched
+              ? "KISA 피싱 사이트 데이터 일치"
+              : "KISA 피싱 사이트 데이터 미일치"}
           </p>
 
           <h3>
-            {data.risk_level === "high"
-              ? "피싱 사이트일 가능성이 있습니다."
-              : data.risk_level === "medium"
-              ? "일부 위험 요소가 확인되었습니다."
-              : "현재까지 확인된 위험 요소가 적습니다."}
+            {data.blacklist?.matched
+              ? "피싱 사이트 데이터와 일치하는 정보가 확인되었습니다."
+              : "KISA 피싱 사이트 데이터에서는 일치 항목이 확인되지 않았습니다."}
           </h3>
 
           <p>
-            AI Agent가 URL 및 웹페이지 분석 결과를
-            종합하여 위험도를 판단합니다.
+            {data.blacklist?.match_type
+              ? `일치 유형: ${data.blacklist.match_type}`
+              : "일치 유형 정보가 없습니다."}
+          </p>
+
+          <p>
+            출처:{" "}
+            {data.blacklist?.source || "-"}
           </p>
         </div>
       </div>
@@ -220,130 +215,108 @@ function Result({ url, result }) {
           </div>
 
           <span>
-            {completedCount} /{" "}
-            {Object.keys(data.detections).length}{" "}
-            분석 완료
+            {detectionEntries.length}개 특징 분석
           </span>
         </div>
 
         <div className="detection-list">
-          {Object.entries(data.detections).map(
-            ([key, status]) => {
-              const info = detectionLabels[key];
+          {detectionEntries.length > 0 ? (
+            detectionEntries.map(
+              ([key, status]) => {
+                const info = detectionLabels[key];
 
-              return (
-                <div
-                  className={`detection-row ${
-                    status === "suspicious"
-                      ? "suspicious"
-                      : status === "normal"
-                      ? "normal"
-                      : ""
-                  }`}
-                  key={key}
-                >
-                  <div>
-                    <h4>
-                      {info?.title || key}
-                    </h4>
+                return (
+                  <div
+                    className={`detection-row ${
+                      status === "suspicious"
+                        ? "suspicious"
+                        : status === "normal"
+                        ? "normal"
+                        : ""
+                    }`}
+                    key={key}
+                  >
+                    <div>
+                      <h4>
+                        {info?.title || key}
+                      </h4>
 
-                    <p>
-                      {info?.description ||
-                        "분석 결과"}
-                    </p>
+                      <p>
+                        {info?.description ||
+                          "분석 결과"}
+                      </p>
+                    </div>
+
+                    <span>
+                      {detectionStatusLabels[
+                        status
+                      ] || status}
+                    </span>
                   </div>
+                );
+              }
+            )
+          ) : (
+            <div className="detection-row">
+              <div>
+                <h4>분석 데이터 없음</h4>
 
-                  <span>
-                    {detectionStatusLabels[
-                      status
-                    ] || status}
-                  </span>
-                </div>
-              );
-            }
+                <p>
+                  분석된 특징 정보가 없습니다.
+                </p>
+              </div>
+            </div>
           )}
         </div>
       </div>
 
-      {/* Web Analysis */}
+      {/* Similar Cases */}
       <div className="result-section">
         <div className="section-heading">
           <div>
-            <p>웹페이지 분석</p>
+            <p>유사 피싱 사례</p>
           </div>
 
-          <span>멀티모달 분석</span>
+          <span>RAG</span>
         </div>
 
-        <div className="web-analysis">
-          {/* Preview */}
-          <div className="page-preview">
-            <div className="preview-bar">
-              <span></span>
-              <span></span>
-              <span></span>
-            </div>
+        <div className="assistant-card">
+          {data.rag?.similar_cases?.length > 0 ? (
+            data.rag.similar_cases.map(
+              (item, index) => (
+                <div
+                  className="finding"
+                  key={index}
+                >
+                  <div className="finding-icon danger">
+                    !
+                  </div>
 
-            <div className="preview-content">
-              <div className="preview-logo"></div>
+                  <div>
+                    <h4>
+                      유사 사이트
+                    </h4>
 
-              <div className="preview-line large"></div>
-              <div className="preview-line"></div>
+                    <p>
+                      {item.url}
+                    </p>
 
-              <div className="preview-input"></div>
-
-              <div className="preview-button"></div>
-            </div>
-          </div>
-
-          {/* Findings */}
-          <div className="web-findings">
-            <div className="finding">
-              <div className="finding-icon danger">
-                !
-              </div>
-
-              <div>
-                <h4>의심스러운 페이지 구조</h4>
-
-                <p>
-                  {data.web_analysis?.text ||
-                    "페이지 구조 분석 결과가 없습니다."}
-                </p>
-              </div>
-            </div>
-
-            <div className="finding">
-              <div className="finding-icon normal">
-                ✓
-              </div>
-
-              <div>
-                <h4>페이지 이미지 분석</h4>
-
-                <p>
-                  {data.web_analysis?.image
-                    ? "이미지 분석이 완료되었습니다."
-                    : "이미지 분석이 아직 완료되지 않았습니다."}
-                </p>
-              </div>
-            </div>
-
-            <div className="finding">
-              <div className="finding-icon normal">
-                ✓
-              </div>
-
-              <div>
-                <h4>페이지 제목</h4>
-
-                <p>
-                  {data.web_analysis?.title ||
-                    "페이지 제목을 확인할 수 없습니다."}
-                </p>
-              </div>
-            </div>
-          </div>
+                    <p>
+                      유사도:{" "}
+                      {Math.round(
+                        item.similarity * 100
+                      )}
+                      %
+                    </p>
+                  </div>
+                </div>
+              )
+            )
+          ) : (
+            <p>
+              유사 피싱 사례가 없습니다.
+            </p>
+          )}
         </div>
       </div>
 
@@ -358,22 +331,25 @@ function Result({ url, result }) {
         </div>
 
         <div className="ai-analysis-card">
-          <div className="ai-badge">AI</div>
+          <div className="ai-badge">
+            AI
+          </div>
 
           <div>
             <h3>분석 결과 설명</h3>
 
             <p className="ai-summary">
-              {data.ai_analysis?.summary ||
+              {aiAnalysis?.summary ||
                 "AI 분석이 아직 완료되지 않았습니다."}
             </p>
 
-            {data.ai_analysis?.reasons?.length > 0 && (
+            {aiAnalysis?.reasons?.length > 0 && (
               <div className="ai-reasons">
-                {data.ai_analysis.reasons.map(
+                {aiAnalysis.reasons.map(
                   (reason, index) => (
                     <div key={index}>
                       <span>✓</span>
+
                       <p>{reason}</p>
                     </div>
                   )
@@ -384,53 +360,68 @@ function Result({ url, result }) {
         </div>
       </div>
 
-      {/* Assistant */}
+      {/* Model */}
       <div className="result-section">
         <div className="section-heading">
           <div>
-            <p>보안 도우미</p>
+            <p>ML 모델</p>
           </div>
 
-          <span>RAG</span>
+          <span>Machine Learning</span>
         </div>
 
         <div className="assistant-card">
-          <div className="assistant-header">
-            <div className="assistant-icon">
+          <div className="finding">
+            <div className="finding-icon normal">
               AI
             </div>
 
             <div>
-              <h3>보안 분석 도우미</h3>
+              <h4>
+                모델 상태
+              </h4>
 
               <p>
-                분석 결과와 관련된 보안 정보를
-                확인할 수 있습니다.
+                {data.model?.status ||
+                  "확인되지 않음"}
               </p>
             </div>
           </div>
 
-          <div className="suggested-questions">
-            <button>
-              왜 위험하다고 판단했나요?
-            </button>
+          <div className="finding">
+            <div className="finding-icon normal">
+              ✓
+            </div>
 
-            <button>
-              이 사이트는 피싱 데이터에 있나요?
-            </button>
+            <div>
+              <h4>
+                위험도 점수
+              </h4>
 
-            <button>
-              어떻게 대응해야 하나요?
-            </button>
+              <p>
+                {data.model?.risk_score !== null &&
+                data.model?.risk_score !== undefined
+                  ? `${data.model.risk_score} / 100`
+                  : "아직 산출되지 않았습니다."}
+              </p>
+            </div>
           </div>
 
-          <div className="assistant-input">
-            <input
-              type="text"
-              placeholder="보안 분석에 대해 질문해보세요."
-            />
+          <div className="finding">
+            <div className="finding-icon normal">
+              ✓
+            </div>
 
-            <button>→</button>
+            <div>
+              <h4>
+                모델 판정
+              </h4>
+
+              <p>
+                {data.model?.label ||
+                  "아직 판정되지 않았습니다."}
+              </p>
+            </div>
           </div>
         </div>
       </div>
@@ -442,7 +433,9 @@ function Result({ url, result }) {
             자동 리포트
           </p>
 
-          <h3>AI 분석 리포트 생성</h3>
+          <h3>
+            AI 분석 리포트 생성
+          </h3>
 
           <p>
             현재 분석 결과를 바탕으로 보안 분석

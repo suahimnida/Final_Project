@@ -3,6 +3,7 @@ import "./Home.css";
 
 function Home({ onAnalyze, onOpenHistory }) {
   const [url, setUrl] = useState("");
+  const [isPublic, setIsPublic] = useState(false);
   const [recentHistory, setRecentHistory] = useState([]);
 
   useEffect(() => {
@@ -30,7 +31,7 @@ function Home({ onAnalyze, onOpenHistory }) {
       return;
     }
 
-    onAnalyze(trimmedUrl);
+    onAnalyze(trimmedUrl, isPublic);
   };
 
   const handleKeyDown = (event) => {
@@ -81,6 +82,47 @@ function Home({ onAnalyze, onOpenHistory }) {
         <p className="input-help">
           분석하려는 웹사이트의 URL을 입력해주세요.
         </p>
+        <div className="visibility-options">
+  <label
+    className={`visibility-option ${
+      !isPublic ? "selected" : ""
+    }`}
+  >
+    <input
+      type="radio"
+      name="visibility"
+      checked={!isPublic}
+      onChange={() => setIsPublic(false)}
+    />
+
+    <div>
+      <strong>비공개</strong>
+      <span>
+        본인의 분석 기록으로만 조회할 수 있습니다.
+      </span>
+    </div>
+  </label>
+
+  <label
+    className={`visibility-option ${
+      isPublic ? "selected" : ""
+    }`}
+  >
+    <input
+      type="radio"
+      name="visibility"
+      checked={isPublic}
+      onChange={() => setIsPublic(true)}
+    />
+
+    <div>
+      <strong>공개</strong>
+      <span>
+        다른 사용자도 분석 결과를 조회할 수 있습니다.
+      </span>
+    </div>
+  </label>
+</div>
       </div>
 
       <div className="feature-grid">

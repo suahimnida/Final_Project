@@ -12,10 +12,12 @@ import "./App.css";
 function App() {
   const [currentPage, setCurrentPage] = useState("home");
   const [targetUrl, setTargetUrl] = useState("");
+  const [isPublic, setIsPublic] = useState(false);
   const [analysisResult, setAnalysisResult] = useState(null);
 
-  const handleAnalyze = (url) => {
+  const handleAnalyze = (url, publicStatus) => {
     setTargetUrl(url);
+    setIsPublic(publicStatus);
     setCurrentPage("analysis");
   };
 
@@ -117,6 +119,7 @@ const handleViewHistory = (item) => {
           {currentPage === "analysis" && (
             <Analysis
               url={targetUrl}
+              isPublic={isPublic}
               onComplete={handleAnalysisComplete}
             />
           )}
