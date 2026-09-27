@@ -4,18 +4,21 @@
     uvicorn app.main:app --reload
 """
 
+import os
 import uuid
 from contextlib import asynccontextmanager
 from pathlib import Path
 
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, Query
+from fastapi.middleware.cors import CORSMiddleware
 
 # backend/.env의 값을 환경변수로 읽어온다 (이미 설정된 환경변수가 우선)
 load_dotenv(Path(__file__).resolve().parents[1] / ".env")
 
 from app import db  # noqa: E402
 from app.schemas import (
+    AiAnalysis,
     AnalysisListResponse,
     AnalysisRequest,
     AnalysisResponse,
@@ -35,6 +38,14 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="피싱 URL 분석 API", version="0.1.0", lifespan=lifespan)
 
+# 프론트 개발 서버(Vite)에서 오는 요청을 허용. 쉼표로 여러 주소 지정 가능
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=os.environ.get("CORS_ORIGINS", "http://localhost:5173").split(","),
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 
 @app.get("/health", response_model=HealthResponse)
 def health():
@@ -43,13 +54,16 @@ def health():
 
 @app.post("/api/v1/analyses", response_model=AnalysisResponse)
 def create_analysis(request: AnalysisRequest):
+    rag_result = rag.explain(request.url)
     result = AnalysisResponse(
-        analysis_id=str(uuid.uuid4()),
+        id=str(uuid.uuid4()),
         status="completed",
         url=request.url,
+        ai_analysis=AiAnalysis(summary=rag_result.summary),
+        extracted_features=rag_result.features,
+        similar_cases=rag_result.similar_cases,
         blacklist=blacklist.check_blacklist(request.url),
         model=model.predict(request.url),
-        rag=rag.explain(request.url),
     )
     db.save_analysis(result)
     return result

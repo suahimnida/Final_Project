@@ -24,26 +24,38 @@ def fake_rag(monkeypatch):
 def test_explain_without_rag_returns_empty():
     assert rag._state is None
     result = rag.explain("https://example.com")
-    assert result.summary is None
-    assert result.references == []
+    assert result == rag.RagResult()
 
 
 def test_explain_maps_rag_output(fake_rag):
     result = rag.explain("http://evil.tk/login")
+    assert result.verdict == "phishing"
+    assert result.confidence == pytest.approx(0.9)
     assert result.summary == "근거 요약"
-    assert [r.url for r in result.references] == ["http://evil.tk/login", "https://naver.com"]
-    assert result.references[0].label == 1
-    assert result.references[0].similarity == pytest.approx(0.91)
+    assert result.features == {"url": "http://evil.tk/login"}
+    assert [c.url for c in result.similar_cases] == ["http://evil.tk/login", "https://naver.com"]
+    assert result.similar_cases[0].label == 1
+    assert result.similar_cases[0].similarity == pytest.approx(0.91)
 
 
-def test_explain_returns_empty_when_claude_fails(fake_rag, monkeypatch):
+def test_explain_keeps_search_results_when_claude_fails(fake_rag, monkeypatch):
     def fail(description, cases):
         raise RuntimeError("API 오류")
 
     monkeypatch.setattr(rag, "_ask_claude", fail)
     result = rag.explain("http://evil.tk/login")
+    assert result.verdict is None
     assert result.summary is None
-    assert result.references == []
+    assert result.features == {"url": "http://evil.tk/login"}
+    assert len(result.similar_cases) == 2
+
+
+def test_explain_returns_empty_when_search_fails(fake_rag, monkeypatch):
+    def fail(description):
+        raise RuntimeError("검색 오류")
+
+    monkeypatch.setattr(rag, "_retrieve", fail)
+    assert rag.explain("http://evil.tk/login") == rag.RagResult()
 
 
 def test_load_rag_without_vector_store(tmp_path, monkeypatch):

@@ -29,28 +29,47 @@ class ModelResult(BaseModel):
     label: str | None = None
 
 
-class RagReference(BaseModel):
+class SimilarCase(BaseModel):
     url: str
-    label: int
+    label: int  # 1 = 피싱, 0 = 정상
     similarity: float
 
 
-class RagResult(BaseModel):
+class Detections(BaseModel):
+    """탐지 항목별 결과. 아직 구현되지 않은 항목은 null."""
+
+    url: dict | None = None
+    url_stats: dict | None = None
+    domain: dict | None = None
+    html: dict | None = None
+    image: dict | None = None
+
+
+class AiAnalysis(BaseModel):
     summary: str | None = None
-    references: list[RagReference] = []
+    reasons: list[str] = []
 
 
 class AnalysisResponse(BaseModel):
-    analysis_id: str
+    id: str
     status: Literal["completed", "failed"]
     url: str
+    # 최종 판정: 블랙리스트/모델/RAG를 합치는 규칙이 정해질 때까지 null
+    verdict: Literal["phishing", "normal"] | None = None
+    confidence: float | None = None
+    risk_score: int | None = None
+    risk_level: Literal["low", "medium", "high"] | None = None
+    detections: Detections = Detections()
+    ai_analysis: AiAnalysis = AiAnalysis()
+    extracted_features: dict = {}
+    similar_cases: list[SimilarCase] = []
+    # 프론트 구조에서 자리가 아직 정해지지 않은 값 (합의 후 이동)
     blacklist: BlacklistResult
     model: ModelResult
-    rag: RagResult
 
 
 class AnalysisSummary(BaseModel):
-    analysis_id: str
+    id: str
     url: str
     created_at: str
 

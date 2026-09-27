@@ -15,9 +15,21 @@ import os
 import sys
 from pathlib import Path
 
-from app.schemas import RagReference, RagResult
+from pydantic import BaseModel
+
+from app.schemas import SimilarCase
 
 logger = logging.getLogger(__name__)
+
+
+class RagResult(BaseModel):
+    """RAG 결과. 백엔드 내부용이며, main.py가 필요한 값을 응답에 옮겨 담는다."""
+
+    verdict: str | None = None  # Claude 판정 (phishing / normal)
+    confidence: float | None = None  # 위 판정에 대한 확신도 (피싱 확률 아님)
+    summary: str | None = None
+    features: dict = {}
+    similar_cases: list[SimilarCase] = []
 
 _CODES_DIR = Path(__file__).resolve().parents[3] / "codes"
 EMBEDDING_MODEL_NAME = "sentence-transformers/all-MiniLM-L6-v2"
@@ -169,17 +181,29 @@ def explain(url: str) -> RagResult:
 
     # RAG가 실패해도 블랙리스트 결과는 반환되도록 여기서 오류를 막는다
     try:
-        description = _row_to_description(_state["extract_features"](url))
+        features = _state["extract_features"](url)
+        description = _row_to_description(features)
         cases = _retrieve(description)
-        verdict = _ask_claude(description, cases)
     except Exception:
-        logger.exception("RAG 분석 실패: %s", url)
+        logger.exception("RAG 검색 실패: %s", url)
         return RagResult()
 
-    return RagResult(
-        summary=verdict["reason"],
-        references=[
-            RagReference(url=c["url"], label=c["label"], similarity=c["similarity"])
+    result = RagResult(
+        features=features,
+        similar_cases=[
+            SimilarCase(url=c["url"], label=c["label"], similarity=c["similarity"])
             for c in cases
         ],
     )
+
+    # Claude 호출이 실패해도 특징과 유사 사례는 그대로 반환한다
+    try:
+        verdict = _ask_claude(description, cases)
+    except Exception:
+        logger.exception("RAG 판정 실패: %s", url)
+        return result
+
+    result.verdict = verdict["verdict"]
+    result.confidence = verdict["confidence"]
+    result.summary = verdict["reason"]
+    return result

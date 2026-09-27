@@ -50,7 +50,7 @@ def save_analysis(result: AnalysisResponse) -> None:
         conn.execute(
             "INSERT INTO analyses (id, url, created_at, result_json) VALUES (?, ?, ?, ?)",
             (
-                result.analysis_id,
+                result.id,
                 result.url,
                 datetime.now(timezone.utc).isoformat(),
                 result.model_dump_json(),
@@ -87,6 +87,6 @@ def list_analyses(limit: int) -> list[AnalysisSummary]:
         conn.close()
 
     return [
-        AnalysisSummary(analysis_id=row["id"], url=row["url"], created_at=row["created_at"])
+        AnalysisSummary(id=row["id"],url=row["url"], created_at=row["created_at"])
         for row in rows
     ]
