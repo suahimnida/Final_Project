@@ -7,6 +7,7 @@ from pydantic import BaseModel, Field, field_validator
 
 class AnalysisRequest(BaseModel):
     url: str = Field(..., examples=["https://example.com"])
+    is_public: bool = False  # 공개 목록에 올릴지. 분석 후에는 바꿀 수 없다
 
     @field_validator("url")
     @classmethod
@@ -54,6 +55,7 @@ class AnalysisResponse(BaseModel):
     id: str
     status: Literal["completed", "failed"]
     url: str
+    is_public: bool = False
     # 최종 판정: 블랙리스트/모델/RAG를 합치는 규칙이 정해질 때까지 null
     verdict: Literal["phishing", "normal"] | None = None
     confidence: float | None = None
@@ -69,13 +71,20 @@ class AnalysisResponse(BaseModel):
 
 
 class AnalysisSummary(BaseModel):
+    """목록용 요약. 브라우저 ID(client_id)는 절대 넣지 않는다."""
+
     id: str
     url: str
+    verdict: Literal["phishing", "normal"] | None = None
     created_at: str
 
 
 class AnalysisListResponse(BaseModel):
     items: list[AnalysisSummary]
+
+
+class ClientResponse(BaseModel):
+    client_id: str
 
 
 class HealthResponse(BaseModel):

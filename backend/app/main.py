@@ -8,9 +8,10 @@ import os
 import uuid
 from contextlib import asynccontextmanager
 from pathlib import Path
+from typing import Literal
 
 from dotenv import load_dotenv
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, Header, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 
 # backend/.env의 값을 환경변수로 읽어온다 (이미 설정된 환경변수가 우선)
@@ -22,6 +23,7 @@ from app.schemas import (
     AnalysisListResponse,
     AnalysisRequest,
     AnalysisResponse,
+    ClientResponse,
     HealthResponse,
 )
 from app.services import blacklist, model, rag
@@ -52,31 +54,53 @@ def health():
     return HealthResponse(status="ok")
 
 
+def _client_key(client_id: uuid.UUID | None) -> str | None:
+    """헤더의 브라우저 ID를 DB에 저장하는 형태(소문자 UUID 문자열)로 바꾼다."""
+    return str(client_id) if client_id else None
+
+
+@app.post("/api/v1/clients", response_model=ClientResponse)
+def create_client():
+    """브라우저 ID 발급. 프론트는 로컬스토리지에 저장해두고 X-Client-Id 헤더로 보낸다."""
+    return ClientResponse(client_id=str(uuid.uuid4()))
+
+
 @app.post("/api/v1/analyses", response_model=AnalysisResponse)
-def create_analysis(request: AnalysisRequest):
+def create_analysis(request: AnalysisRequest, x_client_id: uuid.UUID | None = Header(None)):
     rag_result = rag.explain(request.url)
     result = AnalysisResponse(
         id=str(uuid.uuid4()),
         status="completed",
         url=request.url,
+        is_public=request.is_public,
         ai_analysis=AiAnalysis(summary=rag_result.summary),
         extracted_features=rag_result.features,
         similar_cases=rag_result.similar_cases,
         blacklist=blacklist.check_blacklist(request.url),
         model=model.predict(request.url),
     )
-    db.save_analysis(result)
+    db.save_analysis(result, _client_key(x_client_id))
     return result
 
 
 @app.get("/api/v1/analyses", response_model=AnalysisListResponse)
-def list_analyses(limit: int = Query(20, ge=1, le=100)):
-    return AnalysisListResponse(items=db.list_analyses(limit))
+def list_analyses(
+    scope: Literal["mine", "public"],
+    limit: int = Query(20, ge=1, le=100),
+    x_client_id: uuid.UUID | None = Header(None),
+):
+    """scope=mine: 이 브라우저의 기록 / scope=public: 공개된 기록."""
+    if scope == "public":
+        return AnalysisListResponse(items=db.list_analyses(limit))
+    if x_client_id is None:
+        raise HTTPException(status_code=400, detail="X-Client-Id 헤더가 필요합니다.")
+    return AnalysisListResponse(items=db.list_analyses(limit, _client_key(x_client_id)))
 
 
 @app.get("/api/v1/analyses/{analysis_id}", response_model=AnalysisResponse)
-def read_analysis(analysis_id: str):
-    result = db.get_analysis(analysis_id)
+def read_analysis(analysis_id: str, x_client_id: uuid.UUID | None = Header(None)):
+    # 비공개 결과는 만든 브라우저에서만 보인다. 남의 비공개 결과도 "없음"으로 응답한다
+    result = db.get_analysis(analysis_id, _client_key(x_client_id))
     if result is None:
         raise HTTPException(status_code=404, detail="분석 결과를 찾을 수 없습니다.")
     return result

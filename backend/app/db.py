@@ -34,7 +34,10 @@ def init_db() -> None:
             CREATE TABLE IF NOT EXISTS analyses (
                 id          TEXT PRIMARY KEY,
                 url         TEXT NOT NULL,
+                verdict     TEXT,
                 created_at  TEXT NOT NULL,
+                client_id   TEXT,
+                is_public   INTEGER NOT NULL DEFAULT 0,
                 result_json TEXT NOT NULL
             )
             """
@@ -44,15 +47,22 @@ def init_db() -> None:
         conn.close()
 
 
-def save_analysis(result: AnalysisResponse) -> None:
+def save_analysis(result: AnalysisResponse, client_id: str | None) -> None:
+    """client_id는 응답(result_json)에 넣지 않고 별도 열에만 저장한다."""
     conn = _connect()
     try:
         conn.execute(
-            "INSERT INTO analyses (id, url, created_at, result_json) VALUES (?, ?, ?, ?)",
+            """
+            INSERT INTO analyses (id, url, verdict, created_at, client_id, is_public, result_json)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+            """,
             (
                 result.id,
                 result.url,
+                result.verdict,
                 datetime.now(timezone.utc).isoformat(),
+                client_id,
+                int(result.is_public),
                 result.model_dump_json(),
             ),
         )
@@ -61,11 +71,13 @@ def save_analysis(result: AnalysisResponse) -> None:
         conn.close()
 
 
-def get_analysis(analysis_id: str) -> AnalysisResponse | None:
+def get_analysis(analysis_id: str, client_id: str | None) -> AnalysisResponse | None:
+    """공개 결과이거나 요청한 브라우저가 만든 결과만 반환한다. 아니면 None."""
     conn = _connect()
     try:
         row = conn.execute(
-            "SELECT result_json FROM analyses WHERE id = ?", (analysis_id,)
+            "SELECT result_json FROM analyses WHERE id = ? AND (is_public = 1 OR client_id = ?)",
+            (analysis_id, client_id),
         ).fetchone()
     finally:
         conn.close()
@@ -75,18 +87,26 @@ def get_analysis(analysis_id: str) -> AnalysisResponse | None:
     return AnalysisResponse.model_validate_json(row["result_json"])
 
 
-def list_analyses(limit: int) -> list[AnalysisSummary]:
-    """최근 분석부터 limit개를 반환한다."""
+def list_analyses(limit: int, client_id: str | None = None) -> list[AnalysisSummary]:
+    """client_id가 있으면 그 브라우저의 기록을, 없으면 공개 기록을 최근 순으로 반환한다."""
+    if client_id is None:
+        where, params = "is_public = 1", ()
+    else:
+        where, params = "client_id = ?", (client_id,)
+
     conn = _connect()
     try:
         rows = conn.execute(
-            "SELECT id, url, created_at FROM analyses ORDER BY created_at DESC LIMIT ?",
-            (limit,),
+            f"SELECT id, url, verdict, created_at FROM analyses WHERE {where} "
+            "ORDER BY created_at DESC LIMIT ?",
+            (*params, limit),
         ).fetchall()
     finally:
         conn.close()
 
     return [
-        AnalysisSummary(id=row["id"],url=row["url"], created_at=row["created_at"])
+        AnalysisSummary(
+            id=row["id"], url=row["url"], verdict=row["verdict"], created_at=row["created_at"]
+        )
         for row in rows
     ]

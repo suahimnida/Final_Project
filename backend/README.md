@@ -104,9 +104,13 @@ python build_vector_store.py --input features_sample.csv --index-dir vector_stor
 | 메서드 | 주소 | 설명 |
 |---|---|---|
 | GET | `/health` | 서버 동작 확인 |
-| POST | `/api/v1/analyses` | URL 분석 후 결과 저장 및 반환. 본문: `{"url": "..."}` |
-| GET | `/api/v1/analyses/{analysis_id}` | 저장된 결과 조회. 없으면 404 |
-| GET | `/api/v1/analyses?limit=20` | 최근 분석 목록 (사용 여부 미정) |
+| POST | `/api/v1/clients` | 브라우저 ID 발급 |
+| POST | `/api/v1/analyses` | URL 분석 후 결과 저장 및 반환. 본문: `{"url": "...", "is_public": false}` |
+| GET | `/api/v1/analyses/{analysis_id}` | 저장된 결과 조회. 비공개 결과는 만든 브라우저에서만 보이고, 아니면 404 |
+| GET | `/api/v1/analyses?scope=mine` | 이 브라우저의 분석 기록 (헤더 필수) |
+| GET | `/api/v1/analyses?scope=public` | 공개된 분석 기록 |
+
+프론트는 처음 접속할 때 `/api/v1/clients`로 받은 ID를 로컬스토리지에 저장하고, 모든 요청에 `X-Client-Id` 헤더로 보냅니다. 로그인이 아니므로 브라우저 데이터를 지우면 기록을 다시 볼 수 없습니다. 공개 여부는 분석할 때 정하며 나중에 바꿀 수 없습니다(기본 비공개).
 
 요청/응답의 자세한 형식은 서버 실행 후 `/docs`에서 확인할 수 있습니다.
 

@@ -1,3 +1,4 @@
+import uuid
 
 from fastapi.testclient import TestClient
 
@@ -53,8 +54,54 @@ def test_create_analysis_rejects_blank_url():
     assert res.status_code == 422
 
 
-def test_read_analysis_returns_saved_result():
-    created = client.post("/api/v1/analyses", json={"url": "https://example.com"}).json()
+def new_client_headers() -> dict:
+    client_id = client.post("/api/v1/clients").json()["client_id"]
+    return {"X-Client-Id": client_id}
+
+
+def analyze(url: str, headers: dict | None = None, is_public: bool = False) -> dict:
+    res = client.post("/api/v1/analyses", json={"url": url, "is_public": is_public}, headers=headers)
+    assert res.status_code == 200
+    return res.json()
+
+
+def test_create_client_issues_new_uuid():
+    first = client.post("/api/v1/clients").json()["client_id"]
+    second = client.post("/api/v1/clients").json()["client_id"]
+    assert uuid.UUID(first) and first != second
+
+
+def test_create_analysis_is_private_by_default():
+    assert analyze("https://example.com")["is_public"] is False
+    assert analyze("https://example.com", is_public=True)["is_public"] is True
+
+
+def test_create_analysis_rejects_invalid_client_id():
+    res = client.post(
+        "/api/v1/analyses", json={"url": "https://example.com"}, headers={"X-Client-Id": "abc"}
+    )
+    assert res.status_code == 422
+
+
+def test_owner_can_read_private_result():
+    headers = new_client_headers()
+    created = analyze("https://example.com", headers)
+
+    res = client.get(f"/api/v1/analyses/{created['id']}", headers=headers)
+    assert res.status_code == 200
+    assert res.json() == created
+
+
+def test_others_cannot_read_private_result():
+    created = analyze("https://example.com", new_client_headers())
+
+    assert client.get(f"/api/v1/analyses/{created['id']}").status_code == 404
+    other = new_client_headers()
+    assert client.get(f"/api/v1/analyses/{created['id']}", headers=other).status_code == 404
+
+
+def test_anyone_can_read_public_result():
+    created = analyze("https://example.com", new_client_headers(), is_public=True)
 
     res = client.get(f"/api/v1/analyses/{created['id']}")
     assert res.status_code == 200
@@ -66,27 +113,48 @@ def test_read_analysis_unknown_id_returns_404():
     assert res.status_code == 404
 
 
-def test_list_analyses_newest_first():
+def test_list_mine_returns_only_my_records_newest_first():
+    mine, other = new_client_headers(), new_client_headers()
     for url in ["https://a.com", "https://b.com", "https://c.com"]:
-        client.post("/api/v1/analyses", json={"url": url})
+        analyze(url, mine)
+    analyze("https://other.com", other)
 
-    res = client.get("/api/v1/analyses")
+    res = client.get("/api/v1/analyses", params={"scope": "mine"}, headers=mine)
     assert res.status_code == 200
     items = res.json()["items"]
     assert [item["url"] for item in items] == ["https://c.com", "https://b.com", "https://a.com"]
-    assert set(items[0]) == {"id", "url", "created_at"}
+    assert set(items[0]) == {"id", "url", "verdict", "created_at"}
+
+
+def test_list_mine_requires_client_id():
+    res = client.get("/api/v1/analyses", params={"scope": "mine"})
+    assert res.status_code == 400
+
+
+def test_list_public_returns_only_public_records():
+    headers = new_client_headers()
+    analyze("https://private.com", headers)
+    analyze("https://public.com", headers, is_public=True)
+
+    res = client.get("/api/v1/analyses", params={"scope": "public"})
+    assert [item["url"] for item in res.json()["items"]] == ["https://public.com"]
+
+
+def test_list_requires_scope():
+    assert client.get("/api/v1/analyses").status_code == 422
 
 
 def test_list_analyses_respects_limit():
+    headers = new_client_headers()
     for url in ["https://a.com", "https://b.com", "https://c.com"]:
-        client.post("/api/v1/analyses", json={"url": url})
+        analyze(url, headers)
 
-    res = client.get("/api/v1/analyses", params={"limit": 2})
+    res = client.get("/api/v1/analyses", params={"scope": "mine", "limit": 2}, headers=headers)
     assert [item["url"] for item in res.json()["items"]] == ["https://c.com", "https://b.com"]
 
 
 def test_list_analyses_empty():
-    res = client.get("/api/v1/analyses")
+    res = client.get("/api/v1/analyses", params={"scope": "public"})
     assert res.json() == {"items": []}
 
 
@@ -105,5 +173,6 @@ def test_cors_rejects_unknown_origin():
 
 
 def test_list_analyses_rejects_invalid_limit():
-    assert client.get("/api/v1/analyses", params={"limit": 0}).status_code == 422
-    assert client.get("/api/v1/analyses", params={"limit": 101}).status_code == 422
+    for limit in [0, 101]:
+        res = client.get("/api/v1/analyses", params={"scope": "public", "limit": limit})
+        assert res.status_code == 422
