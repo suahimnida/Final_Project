@@ -125,6 +125,7 @@ python build_vector_store.py --input features_sample.csv --index-dir vector_stor
 | `RAG_TOP_K` | `5` | 검색할 유사 사례 개수 |
 | `BLACKLIST_DIR` | 프로젝트 루트 | `urls.json`, `hosts.json` 위치 |
 | `DB_PATH` | `backend/data/analyses.db` | SQLite 파일 위치 |
+| `CORS_ORIGINS` | `http://localhost:5173` | 요청을 허용할 프론트 주소 (쉼표로 여러 개) |
 
 ## 폴더 구조
 

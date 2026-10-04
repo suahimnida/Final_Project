@@ -98,7 +98,8 @@ def list_analyses(limit: int, client_id: str | None = None) -> list[AnalysisSumm
     try:
         rows = conn.execute(
             f"SELECT id, url, verdict, created_at FROM analyses WHERE {where} "
-            "ORDER BY created_at DESC LIMIT ?",
+            # 저장 시각이 같으면(빠르게 연달아 저장) 나중에 저장된 행(rowid가 큰 쪽)을 앞에
+            "ORDER BY created_at DESC, rowid DESC LIMIT ?",
             (*params, limit),
         ).fetchall()
     finally:

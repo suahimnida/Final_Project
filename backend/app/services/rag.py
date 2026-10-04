@@ -33,7 +33,7 @@ class RagResult(BaseModel):
 
 _CODES_DIR = Path(__file__).resolve().parents[3] / "codes"
 EMBEDDING_MODEL_NAME = "sentence-transformers/all-MiniLM-L6-v2"
-CLAUDE_MODEL = "claude-opus-5"
+CLAUDE_MODEL = "claude-opus-4-7"
 
 SYSTEM_PROMPT = (
     "당신은 피싱 URL 탐지 전문가입니다. '유사 사례'는 과거에 실제로 피싱/정상으로 "
@@ -151,11 +151,9 @@ def _ask_claude(description: str, cases: list[dict]) -> dict:
         f"{c['description']}"
         for i, c in enumerate(cases, start=1)
     )
-    response = _state["client"].beta.messages.create(
+    response = _state["client"].messages.create(
         model=CLAUDE_MODEL,
         max_tokens=4000,
-        betas=["server-side-fallback-2026-07-01"],
-        fallbacks="default",
         system=SYSTEM_PROMPT,
         output_config={
             "effort": "low",

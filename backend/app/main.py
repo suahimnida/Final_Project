@@ -43,7 +43,7 @@ app = FastAPI(title="피싱 URL 분석 API", version="0.1.0", lifespan=lifespan)
 # 프론트 개발 서버(Vite)에서 오는 요청을 허용. 쉼표로 여러 주소 지정 가능
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=os.environ.get("CORS_ORIGINS", "http://localhost:5173").split(","),
+    allow_origins=(os.environ.get("CORS_ORIGINS") or "http://localhost:5173").split(","),
     allow_methods=["*"],
     allow_headers=["*"],
 )
