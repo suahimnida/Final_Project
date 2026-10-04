@@ -9,11 +9,14 @@ URL을 받아 KISA 피싱사이트 목록 조회, RAG(유사 사례 검색 + Cla
 | KISA 블랙리스트 조회 | 동작 |
 | SQLite 저장 / 조회 | 동작 |
 | RAG | 연결됨. API 키와 벡터 스토어가 있어야 동작 (없으면 RAG만 꺼진 채 서버 실행) |
-| ML 모델 | 미연결 (`model.status`가 항상 `not_connected`) |
+| ML 모델 | 연결됨 (`codes/ml_integration`). 모델 파일이 없으면 `model.status`가 `not_ready` |
+| 최종 판정 (`verdict`, `risk_score` 등) | 연결됨 (`codes/ml_integration/risk_judge.py`). 블랙리스트 매치 시 즉시 피싱, 아니면 ML 점수로 판정 (RAG 점수는 아직 없음) |
 
 ## 실행 방법
 
-Python 3.10 이상이 필요합니다. 아래 명령은 모두 `backend` 폴더에서 실행합니다.
+Python 3.10 ~ 3.12가 필요합니다. ML 모델이 학습된 scikit-learn 1.3.2가 3.13 이상을 지원하지 않기 때문입니다.
+(버전이 다른 scikit-learn을 쓰면 오류 없이 엉뚱한 점수가 나오니 `requirements.txt`의 고정 버전을 지켜주세요.)
+아래 명령은 모두 `backend` 폴더에서 실행합니다.
 
 ### 1) 가상환경 만들기 (처음 한 번)
 
@@ -123,6 +126,7 @@ python build_vector_store.py --input features_sample.csv --index-dir vector_stor
 | `ANTHROPIC_API_KEY` | 없음 | Claude API 키. 없으면 RAG 꺼짐 |
 | `RAG_INDEX_DIR` | `codes/vector_store` | 벡터 스토어 폴더 |
 | `RAG_TOP_K` | `5` | 검색할 유사 사례 개수 |
+| `ML_MODEL_DIR` | `codes/ml_integration/models` | ML 모델 파일 위치 |
 | `BLACKLIST_DIR` | 프로젝트 루트 | `urls.json`, `hosts.json` 위치 |
 | `DB_PATH` | `backend/data/analyses.db` | SQLite 파일 위치 |
 | `CORS_ORIGINS` | `http://localhost:5173` | 요청을 허용할 프론트 주소 (쉼표로 여러 개) |
@@ -137,8 +141,9 @@ backend/
 │  ├─ db.py              # SQLite 저장/조회
 │  └─ services/
 │     ├─ blacklist.py    # KISA 블랙리스트 조회
-│     ├─ model.py        # ML 모델 (미연결)
-│     └─ rag.py          # RAG: 유사 사례 검색 + Claude 판정
+│     ├─ model.py        # ML 모델 (codes/ml_integration 호출)
+│     ├─ rag.py          # RAG: 유사 사례 검색 + Claude 판정
+│     └─ verdict.py      # 최종 판정 (codes/ml_integration/risk_judge.py 호출)
 ├─ tests/
 ├─ .env.example
 └─ requirements.txt

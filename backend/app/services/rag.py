@@ -17,7 +17,7 @@ from pathlib import Path
 
 from pydantic import BaseModel
 
-from app.schemas import SimilarCase
+from app.schemas import RagReference, SimilarCase
 
 logger = logging.getLogger(__name__)
 
@@ -30,6 +30,7 @@ class RagResult(BaseModel):
     summary: str | None = None
     features: dict = {}
     similar_cases: list[SimilarCase] = []
+    reference: RagReference = RagReference()  # 문서 검색 결과. 문서 검색 연결 전까지 빈 값
 
 _CODES_DIR = Path(__file__).resolve().parents[3] / "codes"
 EMBEDDING_MODEL_NAME = "sentence-transformers/all-MiniLM-L6-v2"

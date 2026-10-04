@@ -25,8 +25,9 @@ from app.schemas import (
     AnalysisResponse,
     ClientResponse,
     HealthResponse,
+    ModelResult,
 )
-from app.services import blacklist, model, rag
+from app.services import blacklist, model, rag, verdict
 
 
 @asynccontextmanager
@@ -67,17 +68,27 @@ def create_client():
 
 @app.post("/api/v1/analyses", response_model=AnalysisResponse)
 def create_analysis(request: AnalysisRequest, x_client_id: uuid.UUID | None = Header(None)):
-    rag_result = rag.explain(request.url)
+    blacklist_result = blacklist.check_blacklist(request.url)
+    # 블랙리스트에 있으면 피싱으로 확정되므로 RAG/ML은 돌리지 않는다 (팀 합의)
+    if blacklist_result.matched:
+        rag_result = rag.RagResult()
+        model_result = ModelResult(status="not_ready")
+    else:
+        rag_result = rag.explain(request.url)
+        model_result = model.predict(request.url)
+
     result = AnalysisResponse(
         id=str(uuid.uuid4()),
         status="completed",
         url=request.url,
         is_public=request.is_public,
+        **verdict.decide(blacklist_result, model_result),
         ai_analysis=AiAnalysis(summary=rag_result.summary),
         extracted_features=rag_result.features,
         similar_cases=rag_result.similar_cases,
-        blacklist=blacklist.check_blacklist(request.url),
-        model=model.predict(request.url),
+        blacklist=blacklist_result,
+        rag=rag_result.reference,
+        model=model_result,
     )
     db.save_analysis(result, _client_key(x_client_id))
     return result

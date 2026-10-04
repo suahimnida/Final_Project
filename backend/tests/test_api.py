@@ -3,7 +3,8 @@ import uuid
 from fastapi.testclient import TestClient
 
 from app.main import app
-from app.services import rag
+from app.schemas import BlacklistResult, ModelResult
+from app.services import blacklist, model, rag
 
 client = TestClient(app)
 
@@ -14,7 +15,9 @@ def test_health():
     assert res.json() == {"status": "ok"}
 
 
-def test_create_analysis_returns_stub():
+def test_create_analysis_returns_stub(monkeypatch):
+    monkeypatch.setattr(model, "predict", lambda url: ModelResult(status="not_ready"))
+
     res = client.post("/api/v1/analyses", json={"url": "https://example.com"})
     assert res.status_code == 200
     body = res.json()
@@ -30,7 +33,39 @@ def test_create_analysis_returns_stub():
     assert body["extracted_features"] == {}
     assert body["similar_cases"] == []
     assert body["blacklist"] == {"matched": False, "match_type": "none", "source": "KISA 2024"}
-    assert body["model"] == {"status": "not_connected", "risk_score": None, "label": None}
+    assert body["rag"] == {"matched": False, "source": [], "evidence": None}
+    assert body["model"] == {"status": "not_ready", "risk_score": None, "label": None}
+
+
+def test_create_analysis_fills_model_field(monkeypatch):
+    fake = ModelResult(status="ready", risk_score=83.2, label="phishing")
+    monkeypatch.setattr(model, "predict", lambda url: fake)
+
+    body = client.post("/api/v1/analyses", json={"url": "http://evil.tk/x"}).json()
+    assert body["model"] == {"status": "ready", "risk_score": 83.2, "label": "phishing"}
+    # RAG 점수가 생기기 전까지는 ML 점수로 최종 판정한다
+    assert body["verdict"] == "phishing"
+    assert body["risk_score"] == 83.2
+    assert body["risk_level"] == "warning"
+
+
+def test_blacklist_match_skips_rag_and_model(monkeypatch):
+    def must_not_run(url):
+        raise AssertionError("블랙리스트 매치 시 실행되면 안 됨")
+
+    monkeypatch.setattr(
+        blacklist,
+        "check_blacklist",
+        lambda url: BlacklistResult(matched=True, match_type="host", source="KISA 2024"),
+    )
+    monkeypatch.setattr(rag, "explain", must_not_run)
+    monkeypatch.setattr(model, "predict", must_not_run)
+
+    body = client.post("/api/v1/analyses", json={"url": "http://evil.tk/x"}).json()
+    assert body["verdict"] == "phishing"
+    assert body["risk_score"] == 100.0
+    assert body["risk_level"] == "danger"
+    assert body["model"]["status"] == "not_ready"
 
 
 def test_create_analysis_fills_rag_fields(monkeypatch):
@@ -40,6 +75,7 @@ def test_create_analysis_fills_rag_fields(monkeypatch):
         summary="근거 요약",
         features={"url_length": 20},
         similar_cases=[{"url": "http://evil.tk", "label": 1, "similarity": 0.91}],
+        reference={"matched": True, "source": ["KISA 가이드"], "evidence": "문서 근거"},
     )
     monkeypatch.setattr(rag, "explain", lambda url: fake)
 
@@ -47,6 +83,7 @@ def test_create_analysis_fills_rag_fields(monkeypatch):
     assert body["ai_analysis"] == {"summary": "근거 요약", "reasons": []}
     assert body["extracted_features"] == {"url_length": 20}
     assert body["similar_cases"] == [{"url": "http://evil.tk", "label": 1, "similarity": 0.91}]
+    assert body["rag"] == {"matched": True, "source": ["KISA 가이드"], "evidence": "문서 근거"}
 
 
 def test_create_analysis_rejects_blank_url():

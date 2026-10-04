@@ -24,10 +24,21 @@ class BlacklistResult(BaseModel):
     source: str
 
 
+class RagReference(BaseModel):
+    """RAG가 참고한 보안 문서(KISA/OWASP 등)와 근거. 블랙리스트 조회 결과와는 별개다.
+    값의 형태는 codes/ml_integration/risk_judge.py의 RagResult 기준. 내용은 RAG 담당이 채운다."""
+
+    matched: bool = False
+    source: list[str] = []  # 참고한 문서 출처 목록
+    evidence: str | None = None  # 근거 요약
+
+
 class ModelResult(BaseModel):
-    status: Literal["not_connected", "completed", "failed"]
-    risk_score: float | None = None
-    label: str | None = None
+    """값의 형태는 ML 담당 코드(codes/ml_integration/model_integration.py) 기준."""
+
+    status: Literal["ready", "not_ready"]
+    risk_score: float | None = None  # 0~100 (피싱 확률 x 100)
+    label: Literal["phishing", "normal"] | None = None
 
 
 class SimilarCase(BaseModel):
@@ -56,18 +67,20 @@ class AnalysisResponse(BaseModel):
     status: Literal["completed", "failed"]
     url: str
     is_public: bool = False
-    # 최종 판정: 블랙리스트/모델/RAG를 합치는 규칙이 정해질 때까지 null
-    verdict: Literal["phishing", "normal"] | None = None
+    # 최종 판정: codes/ml_integration/risk_judge.py 기준 값. 판정 로직 연결 전까지 null
+    verdict: Literal["phishing", "suspicious", "normal"] | None = None
     confidence: float | None = None
-    risk_score: int | None = None
-    risk_level: Literal["low", "medium", "high"] | None = None
+    risk_score: float | None = None  # 0~100
+    # safe: 30 미만 / caution: 30 이상 60 미만 / warning: 60 이상 85 미만 / danger: 85 이상
+    risk_level: Literal["safe", "caution", "warning", "danger"] | None = None
     detections: Detections = Detections()
     ai_analysis: AiAnalysis = AiAnalysis()
     extracted_features: dict = {}
     similar_cases: list[SimilarCase] = []
     # 프론트 구조에서 자리가 아직 정해지지 않은 값 (합의 후 이동)
-    blacklist: BlacklistResult
-    model: ModelResult
+    blacklist: BlacklistResult  # KISA 블랙리스트 조회
+    rag: RagReference = RagReference()  # RAG 문서 검색
+    model: ModelResult  # ML 모델
 
 
 class AnalysisSummary(BaseModel):
@@ -75,7 +88,7 @@ class AnalysisSummary(BaseModel):
 
     id: str
     url: str
-    verdict: Literal["phishing", "normal"] | None = None
+    verdict: Literal["phishing", "suspicious", "normal"] | None = None
     created_at: str
 
 
