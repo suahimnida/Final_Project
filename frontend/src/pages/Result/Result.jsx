@@ -1,75 +1,25 @@
-import { useEffect } from "react";
 import "./Result.css";
 
-const mockResult = {
-  id: "8d210232-8d4e-4fe6-98ad-d5e79e65b036",
-
-  url: "https://example.com",
-  status: "completed",
-
-  blacklist: {
-    matched: true,
-    match_type: "exact_url",
-    source: "KISA 2024",
-  },
-
-  model: {
-    status: "not_connected",
-    risk_score: null,
-    label: null,
-  },
-
-  rag: {
-    extracted_features: {
-      url_length: "suspicious",
-      character_pattern: "suspicious",
-      entropy: "normal",
-      ngram: "suspicious",
-    },
-
-    similar_cases: [
-      {
-        url: "https://example.com",
-        similarity: 0.91,
-      },
-    ],
-
-    ai_analysis: {
-      summary:
-        "URL 구조와 분석된 특징을 종합했을 때 피싱 사이트와 유사한 특성이 확인되었습니다.",
-
-      reasons: [
-        "URL 길이가 비정상적으로 깁니다.",
-        "의심스러운 문자 패턴이 발견되었습니다.",
-        "유사한 피싱 사례가 확인되었습니다.",
-      ],
-    },
-  },
-
-  completed_steps: [
-    "url",
-    "url_stats",
-    "domain",
-    "html",
-  ],
-};
-
 const detectionLabels = {
-  url_length: {
-    title: "URL 길이",
-    description: "URL 길이가 일반적인 범위를 벗어나는지 확인",
+  url: {
+    title: "URL 구조",
+    description: "URL 구조와 문자열 패턴 분석",
   },
-  character_pattern: {
-    title: "문자 패턴",
-    description: "의심스러운 문자 조합 및 특수문자 패턴 분석",
+  url_stats: {
+    title: "URL 통계",
+    description: "URL 길이, 엔트로피 및 n-gram 패턴 분석",
   },
-  entropy: {
-    title: "엔트로피",
-    description: "URL 문자열의 무작위성 분석",
+  domain: {
+    title: "도메인 분석",
+    description: "도메인, 인증서 및 리디렉션 분석",
   },
-  ngram: {
-    title: "n-gram",
-    description: "의심스러운 문자열 조합 빈도 분석",
+  html: {
+    title: "HTML 분석",
+    description: "HTML 구조 및 의심스러운 요소 분석",
+  },
+  image: {
+    title: "페이지 콘텐츠",
+    description: "텍스트 및 이미지 콘텐츠 분석",
   },
 };
 
@@ -79,63 +29,70 @@ const detectionStatusLabels = {
   not_analyzed: "분석되지 않음",
 };
 
+const riskLevelLabels = {
+  safe: "안전",
+  caution: "주의",
+  warning: "경고",
+  danger: "위험",
+};
+
+const verdictLabels = {
+  phishing: "피싱",
+  suspicious: "의심",
+  normal: "정상",
+};
+
+const modelStatusLabels = {
+  ready: "정상 작동",
+  not_ready: "사용할 수 없음",
+};
+
+const matchTypeLabels = {
+  none: "일치하지 않음",
+  exact: "정확히 일치",
+  host: "도메인 일치",
+};
+
 function Result({ url, result }) {
-  const data = result || {
-    ...mockResult,
-    url: url || mockResult.url,
-  };
+  if (!result) {
+    return (
+      <section className="result-page">
+        <div className="result-header">
+          <p className="eyebrow">보안 분석 결과</p>
 
-  const features = data.rag?.extracted_features || {};
+          <h2>분석 결과를 불러올 수 없습니다.</h2>
 
-  const aiAnalysis = data.rag?.ai_analysis;
-
-  const completedCount =
-    data.completed_steps?.length || 0;
-
-  const detectionEntries =
-    Object.entries(features);
-
-  useEffect(() => {
-    const historyItem = {
-      id: Date.now(),
-      url: data.url,
-      analyzedAt: new Date().toISOString(),
-      result: data,
-    };
-
-    const savedHistory = localStorage.getItem(
-      "phishingAnalysisHistory"
+          <p className="result-description">
+            분석 결과가 존재하지 않습니다.
+          </p>
+        </div>
+      </section>
     );
+  }
 
-    let history = [];
+  const data = result;
 
-    if (savedHistory) {
-      try {
-        history = JSON.parse(savedHistory);
-      } catch (error) {
-        console.error(
-          "분석 기록을 불러오지 못했습니다:",
-          error
-        );
-      }
-    }
+  const detectionEntries = Object.entries(
+    data.detections || {}
+  ).filter(([, value]) => value !== null);
 
-    const alreadyExists = history.some(
-      (item) => item.url === historyItem.url
-    );
+  const riskLevel =
+    data.risk_level || "caution";
 
-    if (!alreadyExists) {
-      const updatedHistory = [
-        historyItem,
-        ...history,
-      ];
+  const verdict =
+    data.verdict || "suspicious";
 
-      localStorage.setItem(
-        "phishingAnalysisHistory",
-        JSON.stringify(updatedHistory)
-      );
-    }
-  }, [data.url]);
+  const riskScore =
+    data.risk_score !== null &&
+    data.risk_score !== undefined
+      ? Number(data.risk_score)
+      : null;
+
+  const confidence =
+    data.confidence !== null &&
+    data.confidence !== undefined
+      ? Number(data.confidence)
+      : null;
 
   return (
     <section className="result-page">
@@ -158,52 +115,114 @@ function Result({ url, result }) {
           </p>
 
           <p className="result-target-url">
-            {data.url}
+            {data.url || url || "-"}
           </p>
         </div>
 
         <span className="result-completed">
-          {data.status === "partial"
-            ? `부분 분석 · ${completedCount}개 완료`
-            : "분석 완료"}
+          {data.status === "completed"
+            ? "분석 완료"
+            : data.status || "분석 상태 확인 필요"}
         </span>
       </div>
 
-      {/* Blacklist */}
-      <div className="risk-card">
+      {/* Overall Risk */}
+      <div className={`risk-card ${riskLevel}`}>
         <div className="risk-score">
           <div>
             <span className="score-number">
-              {data.blacklist?.matched
-                ? "주의"
-                : "확인"}
+              {riskScore !== null
+                ? riskScore.toFixed(1)
+                : "-"}
+            </span>
+
+            <span className="score-unit">
+              / 100
             </span>
           </div>
+
+          <span className="risk-level">
+            {riskLevelLabels[riskLevel] ||
+              riskLevel}
+          </span>
         </div>
 
         <div className="risk-info">
           <p className="risk-label">
-            {data.blacklist?.matched
-              ? "KISA 피싱 사이트 데이터 일치"
-              : "KISA 피싱 사이트 데이터 미일치"}
+            최종 위험도
           </p>
 
           <h3>
-            {data.blacklist?.matched
-              ? "피싱 사이트 데이터와 일치하는 정보가 확인되었습니다."
-              : "KISA 피싱 사이트 데이터에서는 일치 항목이 확인되지 않았습니다."}
+            {verdictLabels[verdict] ||
+              verdict}
+          }
           </h3>
 
           <p>
-            {data.blacklist?.match_type
-              ? `일치 유형: ${data.blacklist.match_type}`
-              : "일치 유형 정보가 없습니다."}
+            {confidence !== null
+              ? `판정 신뢰도: ${confidence.toFixed(1)}%`
+              : "판정 신뢰도 정보가 없습니다."}
           </p>
 
           <p>
-            출처:{" "}
-            {data.blacklist?.source || "-"}
+            최종 위험도는 URL 분석 결과와 ML 모델 분석 결과를
+            종합하여 판단됩니다.
           </p>
+        </div>
+      </div>
+
+      {/* Blacklist */}
+      <div className="result-section">
+        <div className="section-heading">
+          <div>
+            <p>블랙리스트 조회</p>
+          </div>
+
+          <span>KISA</span>
+        </div>
+
+        <div className="assistant-card">
+          <div className="finding">
+            <div
+              className={`finding-icon ${
+                data.blacklist?.matched
+                  ? "danger"
+                  : "normal"
+              }`}
+            >
+              {data.blacklist?.matched
+                ? "!"
+                : "✓"}
+            </div>
+
+            <div>
+              <h4>
+                {data.blacklist?.matched
+                  ? "블랙리스트 일치"
+                  : "블랙리스트 미일치"}
+              </h4>
+
+              <p>
+                {data.blacklist?.matched
+                  ? "KISA 피싱 사이트 데이터에서 일치하는 정보가 확인되었습니다."
+                  : "KISA 피싱 사이트 데이터에서 일치하는 정보가 확인되지 않았습니다."}
+              </p>
+
+              <p>
+                일치 유형:{" "}
+                {matchTypeLabels[
+                  data.blacklist?.match_type
+                ] ||
+                  data.blacklist?.match_type ||
+                  "-"}
+              </p>
+
+              <p>
+                출처:{" "}
+                {data.blacklist?.source || "-"}
+              </p>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -215,15 +234,37 @@ function Result({ url, result }) {
           </div>
 
           <span>
-            {detectionEntries.length}개 특징 분석
+            {detectionEntries.length}개 항목
           </span>
         </div>
 
         <div className="detection-list">
           {detectionEntries.length > 0 ? (
             detectionEntries.map(
-              ([key, status]) => {
-                const info = detectionLabels[key];
+              ([key, detection]) => {
+                const info =
+                  detectionLabels[key];
+
+                /*
+                 * detections의 실제 값 구조가
+                 * 아직 항목별로 확정되지 않았기 때문에
+                 * 문자열/객체 모두 안전하게 표시합니다.
+                 */
+                let status = null;
+
+                if (
+                  typeof detection === "string"
+                ) {
+                  status = detection;
+                } else if (
+                  detection &&
+                  typeof detection === "object"
+                ) {
+                  status =
+                    detection.status ||
+                    detection.label ||
+                    null;
+                }
 
                 return (
                   <div
@@ -250,7 +291,9 @@ function Result({ url, result }) {
                     <span>
                       {detectionStatusLabels[
                         status
-                      ] || status}
+                      ] ||
+                        status ||
+                        "분석 완료"}
                     </span>
                   </div>
                 );
@@ -259,10 +302,10 @@ function Result({ url, result }) {
           ) : (
             <div className="detection-row">
               <div>
-                <h4>분석 데이터 없음</h4>
+                <h4>탐지 데이터 없음</h4>
 
                 <p>
-                  분석된 특징 정보가 없습니다.
+                  현재 제공된 탐지 항목이 없습니다.
                 </p>
               </div>
             </div>
@@ -281,32 +324,37 @@ function Result({ url, result }) {
         </div>
 
         <div className="assistant-card">
-          {data.rag?.similar_cases?.length > 0 ? (
-            data.rag.similar_cases.map(
+          {data.similar_cases?.length > 0 ? (
+            data.similar_cases.map(
               (item, index) => (
                 <div
                   className="finding"
-                  key={index}
+                  key={`${item.url}-${index}`}
                 >
                   <div className="finding-icon danger">
                     !
                   </div>
 
                   <div>
-                    <h4>
-                      유사 사이트
-                    </h4>
+                    <h4>유사 사이트</h4>
+
+                    <p>{item.url}</p>
 
                     <p>
-                      {item.url}
+                      피싱 여부:{" "}
+                      {item.label === 1
+                        ? "피싱"
+                        : "정상"}
                     </p>
 
                     <p>
                       유사도:{" "}
-                      {Math.round(
-                        item.similarity * 100
-                      )}
-                      %
+                      {typeof item.similarity ===
+                      "number"
+                        ? `${Math.round(
+                            item.similarity * 100
+                          )}%`
+                        : "-"}
                     </p>
                   </div>
                 </div>
@@ -315,6 +363,62 @@ function Result({ url, result }) {
           ) : (
             <p>
               유사 피싱 사례가 없습니다.
+            </p>
+          )}
+        </div>
+      </div>
+
+      {/* RAG Evidence */}
+      <div className="result-section">
+        <div className="section-heading">
+          <div>
+            <p>보안 근거</p>
+          </div>
+
+          <span>RAG</span>
+        </div>
+
+        <div className="assistant-card">
+          {data.rag?.matched ? (
+            <>
+              <div className="finding">
+                <div className="finding-icon normal">
+                  R
+                </div>
+
+                <div>
+                  <h4>관련 보안 자료 확인</h4>
+
+                  <p>
+                    {data.rag.evidence ||
+                      "관련 보안 문서의 근거가 확인되었습니다."}
+                  </p>
+                </div>
+              </div>
+
+              {data.rag.source?.length > 0 && (
+                <div className="finding">
+                  <div className="finding-icon normal">
+                    ✓
+                  </div>
+
+                  <div>
+                    <h4>참고 자료</h4>
+
+                    {data.rag.source.map(
+                      (source, index) => (
+                        <p key={index}>
+                          {source}
+                        </p>
+                      )
+                    )}
+                  </div>
+                </div>
+              )}
+            </>
+          ) : (
+            <p>
+              관련 RAG 근거가 없습니다.
             </p>
           )}
         </div>
@@ -339,13 +443,14 @@ function Result({ url, result }) {
             <h3>분석 결과 설명</h3>
 
             <p className="ai-summary">
-              {aiAnalysis?.summary ||
-                "AI 분석이 아직 완료되지 않았습니다."}
+              {data.ai_analysis?.summary ||
+                "AI 분석 설명이 아직 제공되지 않았습니다."}
             </p>
 
-            {aiAnalysis?.reasons?.length > 0 && (
+            {data.ai_analysis?.reasons?.length >
+              0 && (
               <div className="ai-reasons">
-                {aiAnalysis.reasons.map(
+                {data.ai_analysis.reasons.map(
                   (reason, index) => (
                     <div key={index}>
                       <span>✓</span>
@@ -372,17 +477,24 @@ function Result({ url, result }) {
 
         <div className="assistant-card">
           <div className="finding">
-            <div className="finding-icon normal">
+            <div
+              className={`finding-icon ${
+                data.model?.status === "ready"
+                  ? "normal"
+                  : "danger"
+              }`}
+            >
               AI
             </div>
 
             <div>
-              <h4>
-                모델 상태
-              </h4>
+              <h4>모델 상태</h4>
 
               <p>
-                {data.model?.status ||
+                {modelStatusLabels[
+                  data.model?.status
+                ] ||
+                  data.model?.status ||
                   "확인되지 않음"}
               </p>
             </div>
@@ -394,13 +506,13 @@ function Result({ url, result }) {
             </div>
 
             <div>
-              <h4>
-                위험도 점수
-              </h4>
+              <h4>모델 위험도 점수</h4>
 
               <p>
-                {data.model?.risk_score !== null &&
-                data.model?.risk_score !== undefined
+                {data.model?.risk_score !==
+                  null &&
+                data.model?.risk_score !==
+                  undefined
                   ? `${data.model.risk_score} / 100`
                   : "아직 산출되지 않았습니다."}
               </p>
@@ -413,18 +525,62 @@ function Result({ url, result }) {
             </div>
 
             <div>
-              <h4>
-                모델 판정
-              </h4>
+              <h4>모델 판정</h4>
 
               <p>
-                {data.model?.label ||
-                  "아직 판정되지 않았습니다."}
+                {data.model?.label ===
+                "phishing"
+                  ? "피싱"
+                  : data.model?.label ===
+                    "normal"
+                  ? "정상"
+                  : "아직 판정되지 않았습니다."}
               </p>
             </div>
           </div>
         </div>
       </div>
+
+      {/* Extracted Features */}
+      {data.extracted_features &&
+        Object.keys(data.extracted_features)
+          .length > 0 && (
+          <div className="result-section">
+            <div className="section-heading">
+              <div>
+                <p>추출된 특징</p>
+              </div>
+
+              <span>Features</span>
+            </div>
+
+            <div className="assistant-card">
+              {Object.entries(
+                data.extracted_features
+              ).map(([key, value]) => (
+                <div
+                  className="finding"
+                  key={key}
+                >
+                  <div className="finding-icon normal">
+                    ✓
+                  </div>
+
+                  <div>
+                    <h4>{key}</h4>
+
+                    <p>
+                      {typeof value ===
+                      "object"
+                        ? JSON.stringify(value)
+                        : String(value)}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
       {/* Report */}
       <div className="report-card">
@@ -433,9 +589,7 @@ function Result({ url, result }) {
             자동 리포트
           </p>
 
-          <h3>
-            AI 분석 리포트 생성
-          </h3>
+          <h3>AI 분석 리포트 생성</h3>
 
           <p>
             현재 분석 결과를 바탕으로 보안 분석
@@ -453,4 +607,3 @@ function Result({ url, result }) {
 }
 
 export default Result;
-

@@ -90,11 +90,6 @@
   letter-spacing: -0.06em;
 }
 
-.score-total {
-  color: #687270;
-  font-size: 18px;
-}
-
 .risk-label {
   color: #ff4d5a;
   font-size: 10px;
@@ -113,6 +108,85 @@
   color: #899291;
   font-size: 13px;
   line-height: 1.6;
+}
+
+/* Risk Level */
+
+.risk-card.safe {
+  border-color: rgba(66, 232, 196, 0.25);
+}
+
+.risk-card.safe .score-number {
+  color: #42e8c4;
+}
+
+.risk-card.safe .risk-label {
+  color: #42e8c4;
+}
+
+.risk-card.caution {
+  border-color: rgba(255, 184, 77, 0.25);
+}
+
+.risk-card.caution .score-number {
+  color: #ffb84d;
+}
+
+.risk-card.caution .risk-label {
+  color: #ffb84d;
+}
+
+.risk-card.warning {
+  border-color: rgba(255, 184, 77, 0.35);
+}
+
+.risk-card.warning .score-number {
+  color: #ffb84d;
+}
+
+.risk-card.warning .risk-label {
+  color: #ffb84d;
+}
+
+.risk-card.danger {
+  border-color: rgba(255, 77, 90, 0.35);
+}
+
+.risk-card.danger .score-number {
+  color: #ff4d5a;
+}
+
+.risk-card.danger .risk-label {
+  color: #ff4d5a;
+}
+
+.score-unit {
+  margin-left: 6px;
+  color: #687270;
+  font-size: 18px;
+}
+
+.risk-level {
+  display: inline-block;
+  margin-top: 10px;
+  padding: 5px 8px;
+  border-radius: 5px;
+  background: rgba(66, 232, 196, 0.08);
+  color: #42e8c4;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.risk-card.caution .risk-level,
+.risk-card.warning .risk-level {
+  background: rgba(255, 184, 77, 0.08);
+  color: #ffb84d;
+}
+
+.risk-card.danger .risk-level {
+  background: rgba(255, 77, 90, 0.08);
+  color: #ff4d5a;
 }
 
 /* Sections */

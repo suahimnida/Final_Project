@@ -7,21 +7,47 @@ function Home({ onAnalyze, onOpenHistory }) {
   const [recentHistory, setRecentHistory] = useState([]);
 
   useEffect(() => {
-    const savedHistory = localStorage.getItem(
-      "phishingAnalysisHistory"
-    );
+    const fetchRecentHistory = async () => {
+      const clientId =
+        localStorage.getItem("phishingClientId");
 
-    if (savedHistory) {
+      if (!clientId) {
+        return;
+      }
+
       try {
-        const history = JSON.parse(savedHistory);
-        setRecentHistory(history.slice(0, 3));
+        const response = await fetch(
+          "http://localhost:8000/api/v1/analyses?scope=mine",
+          {
+            headers: {
+              "X-Client-Id": clientId,
+            },
+          }
+        );
+
+        if (!response.ok) {
+          throw new Error(
+            `최근 분석 기록 조회 실패: ${response.status}`
+          );
+        }
+
+        const data = await response.json();
+
+        // 백엔드 응답: { items: [...] }
+        setRecentHistory(
+          Array.isArray(data.items)
+            ? data.items.slice(0, 3)
+            : []
+        );
       } catch (error) {
         console.error(
           "최근 분석 기록을 불러오지 못했습니다:",
           error
         );
       }
-    }
+    };
+
+    fetchRecentHistory();
   }, []);
 
   const handleSubmit = () => {
@@ -82,47 +108,48 @@ function Home({ onAnalyze, onOpenHistory }) {
         <p className="input-help">
           분석하려는 웹사이트의 URL을 입력해주세요.
         </p>
+
         <div className="visibility-options">
-  <label
-    className={`visibility-option ${
-      !isPublic ? "selected" : ""
-    }`}
-  >
-    <input
-      type="radio"
-      name="visibility"
-      checked={!isPublic}
-      onChange={() => setIsPublic(false)}
-    />
+          <label
+            className={`visibility-option ${
+              !isPublic ? "selected" : ""
+            }`}
+          >
+            <input
+              type="radio"
+              name="visibility"
+              checked={!isPublic}
+              onChange={() => setIsPublic(false)}
+            />
 
-    <div>
-      <strong>비공개</strong>
-      <span>
-        본인의 분석 기록으로만 조회할 수 있습니다.
-      </span>
-    </div>
-  </label>
+            <div>
+              <strong>비공개</strong>
+              <span>
+                이 브라우저에서만 분석 결과를 조회할 수 있습니다.
+              </span>
+            </div>
+          </label>
 
-  <label
-    className={`visibility-option ${
-      isPublic ? "selected" : ""
-    }`}
-  >
-    <input
-      type="radio"
-      name="visibility"
-      checked={isPublic}
-      onChange={() => setIsPublic(true)}
-    />
+          <label
+            className={`visibility-option ${
+              isPublic ? "selected" : ""
+            }`}
+          >
+            <input
+              type="radio"
+              name="visibility"
+              checked={isPublic}
+              onChange={() => setIsPublic(true)}
+            />
 
-    <div>
-      <strong>공개</strong>
-      <span>
-        다른 사용자도 분석 결과를 조회할 수 있습니다.
-      </span>
-    </div>
-  </label>
-</div>
+            <div>
+              <strong>공개</strong>
+              <span>
+                다른 사용자도 분석 결과를 조회할 수 있습니다.
+              </span>
+            </div>
+          </label>
+        </div>
       </div>
 
       <div className="feature-grid">
@@ -171,12 +198,12 @@ function Home({ onAnalyze, onOpenHistory }) {
           </div>
 
           <button
-  className="recent-more-button"
-  onClick={onOpenHistory}
->
-  전체 보기
-  <span>→</span>
-</button>
+            className="recent-more-button"
+            onClick={onOpenHistory}
+          >
+            전체 보기
+            <span>→</span>
+          </button>
         </div>
 
         {recentHistory.length === 0 ? (
@@ -186,8 +213,21 @@ function Home({ onAnalyze, onOpenHistory }) {
         ) : (
           <div className="recent-list">
             {recentHistory.map((item) => {
-              const isPhishing =
-                item.result?.risk_level === "high";
+              const verdict = item.verdict;
+
+              const statusClass =
+                verdict === "phishing"
+                  ? "danger"
+                  : verdict === "suspicious"
+                    ? "warning"
+                    : "normal";
+
+              const statusText =
+                verdict === "phishing"
+                  ? "피싱"
+                  : verdict === "suspicious"
+                    ? "의심"
+                    : "정상";
 
               return (
                 <div
@@ -196,13 +236,9 @@ function Home({ onAnalyze, onOpenHistory }) {
                 >
                   <div className="recent-item-main">
                     <span
-                      className={`recent-status ${
-                        isPhishing ? "danger" : "normal"
-                      }`}
+                      className={`recent-status ${statusClass}`}
                     >
-                      {isPhishing
-                        ? "피싱 의심"
-                        : "정상"}
+                      {statusText}
                     </span>
 
                     <p>{item.url}</p>
@@ -210,7 +246,7 @@ function Home({ onAnalyze, onOpenHistory }) {
 
                   <span className="recent-date">
                     {new Date(
-                      item.analyzedAt
+                      item.created_at
                     ).toLocaleDateString("ko-KR")}
                   </span>
                 </div>

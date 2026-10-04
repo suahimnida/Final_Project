@@ -5,8 +5,8 @@ import Analysis from "./pages/Analysis/Analysis";
 import Result from "./pages/Result/Result";
 import History from "./pages/History/History";
 import DetectionMethods from "./pages/DetectionMethods/DetectionMethods";
-import Dataset from "./pages/Dataset/Dataset"; 
-import MLModel from "./pages/MLModel/MLModel"; 
+import Dataset from "./pages/Dataset/Dataset";
+import MLModel from "./pages/MLModel/MLModel";
 import "./App.css";
 
 function App() {
@@ -21,17 +21,16 @@ function App() {
     setCurrentPage("analysis");
   };
 
- 
-const handleAnalysisComplete = (result) => {
-  setAnalysisResult(result);
-  setCurrentPage("result");
-};
+  const handleAnalysisComplete = (result) => {
+    setAnalysisResult(result);
+    setCurrentPage("result");
+  };
 
-const handleViewHistory = (item) => {
-  setTargetUrl(item.url);
-  setAnalysisResult(item.result);
-  setCurrentPage("result");
-};
+  const handleViewHistory = (result) => {
+    setTargetUrl(result.url);
+    setAnalysisResult(result);
+    setCurrentPage("result");
+  };
 
   return (
     <div className="app">
@@ -78,9 +77,13 @@ const handleViewHistory = (item) => {
 
             <button
               className={`sidebar-item ${
-                currentPage === "detection-methods" ? "active" : ""
+                currentPage === "detection-methods"
+                  ? "active"
+                  : ""
               }`}
-              onClick={() => setCurrentPage("detection-methods")}
+              onClick={() =>
+                setCurrentPage("detection-methods")
+              }
             >
               <span>◈</span>
               탐지 방법
@@ -88,33 +91,43 @@ const handleViewHistory = (item) => {
 
             <button
               className={`sidebar-item ${
-                currentPage === "dataset" ? "active" : ""
-             }`}
-             onClick={() => setCurrentPage("dataset")}
+                currentPage === "dataset"
+                  ? "active"
+                  : ""
+              }`}
+              onClick={() =>
+                setCurrentPage("dataset")
+              }
             >
               <span>◫</span>
               데이터셋
             </button>
 
             <button
-  className={`sidebar-item ${
-    currentPage === "ml-model" ? "active" : ""
-  }`}
-  onClick={() => setCurrentPage("ml-model")}
->
-  <span>◈</span>
-  ML 모델
-</button>
+              className={`sidebar-item ${
+                currentPage === "ml-model"
+                  ? "active"
+                  : ""
+              }`}
+              onClick={() =>
+                setCurrentPage("ml-model")
+              }
+            >
+              <span>◈</span>
+              ML 모델
+            </button>
           </div>
         </aside>
 
         <main className="main-content">
           {currentPage === "home" && (
-  <Home
-    onAnalyze={handleAnalyze}
-    onOpenHistory={() => setCurrentPage("history")}
-  />
-)}
+            <Home
+              onAnalyze={handleAnalyze}
+              onOpenHistory={() =>
+                setCurrentPage("history")
+              }
+            />
+          )}
 
           {currentPage === "analysis" && (
             <Analysis
@@ -132,14 +145,18 @@ const handleViewHistory = (item) => {
           )}
 
           {currentPage === "history" && (
-            <History onViewResult={handleViewHistory} />
+            <History
+              onViewResult={handleViewHistory}
+            />
           )}
 
-           {currentPage === "detection-methods" && (
+          {currentPage === "detection-methods" && (
             <DetectionMethods />
-         )}
-           {currentPage === "dataset" && <Dataset />}
-           {currentPage === "ml-model" && <MLModel />}
+          )}
+
+          {currentPage === "dataset" && <Dataset />}
+
+          {currentPage === "ml-model" && <MLModel />}
         </main>
       </div>
     </div>

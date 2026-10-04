@@ -39,6 +39,7 @@ function Analysis({ url, isPublic, onComplete }) {
     const runAnalysis = async () => {
       try {
         setError("");
+        setCurrentStep(0);
 
         const result = await analyzeUrl(url, isPublic);
 
@@ -71,7 +72,6 @@ function Analysis({ url, isPublic, onComplete }) {
     const timer = setInterval(() => {
       setCurrentStep((prev) => {
         if (prev >= analysisSteps.length - 1) {
-          clearInterval(timer);
           return prev;
         }
 
@@ -82,87 +82,95 @@ function Analysis({ url, isPublic, onComplete }) {
     return () => clearInterval(timer);
   }, [error]);
 
+  const currentStepData =
+    analysisSteps[currentStep] || analysisSteps[analysisSteps.length - 1];
+
   return (
-  <section className="analysis-page">
-    <div className="analysis-header">
-      <p className="eyebrow">URL 보안 분석</p>
+    <section className="analysis-page">
+      <div className="analysis-header">
+        <p className="eyebrow">URL 보안 분석</p>
 
-      <h2>웹사이트 분석 중</h2>
+        <h2>웹사이트 분석 중</h2>
 
-      <p className="analysis-description">
-        여러 보안 지표를 분석하여 해당 웹사이트의
-        피싱 위험 가능성을 확인하고 있습니다.
-      </p>
-    </div>
-
-    <div className="target-card">
-      <div className="target-label">분석 대상 URL</div>
-      <div className="target-url">{url}</div>
-    </div>
-
-    <div className="pipeline-card">
-      <div className="pipeline-header">
-        <div>
-          <p className="pipeline-label">분석 과정</p>
-          <h3>보안 검사</h3>
-        </div>
-
-        <span className={`pipeline-status ${error ? "error" : ""}`}>
-          {error ? "연결 오류" : "분석 중"}
-        </span>
-      </div>
-
-      <div className="analysis-steps">
-        {analysisSteps.map((step, index) => {
-          const isCompleted = index < currentStep;
-          const isActive = index === currentStep;
-
-          return (
-            <div
-              className={`analysis-step ${
-                isCompleted ? "completed" : ""
-              } ${isActive ? "active" : ""}`}
-              key={step.title}
-            >
-              <div className="step-icon">
-                {isCompleted ? "✓" : isActive ? "●" : "○"}
-              </div>
-
-              <div className="step-content">
-                <h4>{step.title}</h4>
-                <p>{step.description}</p>
-              </div>
-
-              <span className="step-status">
-                {isCompleted
-                  ? "완료"
-                  : isActive
-                  ? "분석 중"
-                  : "대기 중"}
-              </span>
-            </div>
-          );
-        })}
-      </div>
-    </div>
-
-    {error ? (
-      <div className="analysis-error">
-        <strong>분석 서버에 연결할 수 없습니다.</strong>
-        <p>
-          현재까지 진행된 분석 결과는 확인할 수 있습니다.
+        <p className="analysis-description">
+          여러 보안 지표를 분석하여 해당 웹사이트의
+          피싱 위험 가능성을 확인하고 있습니다.
         </p>
       </div>
-    ) : (
-      <div className="analysis-footer">
-        <span className="loading-dot"></span>
-        {analysisSteps[currentStep].title}을(를) 분석하고 있습니다...
-      </div>
-    )}
 
-    
-  </section>
-);
+      <div className="target-card">
+        <div className="target-label">분석 대상 URL</div>
+        <div className="target-url">{url}</div>
+      </div>
+
+      <div className="pipeline-card">
+        <div className="pipeline-header">
+          <div>
+            <p className="pipeline-label">분석 과정</p>
+            <h3>보안 검사</h3>
+          </div>
+
+          <span
+            className={`pipeline-status ${error ? "error" : ""}`}
+          >
+            {error ? "연결 오류" : "분석 중"}
+          </span>
+        </div>
+
+        <div className="analysis-steps">
+          {analysisSteps.map((step, index) => {
+            const isCompleted = index < currentStep;
+            const isActive = index === currentStep;
+
+            return (
+              <div
+                className={`analysis-step ${
+                  isCompleted ? "completed" : ""
+                } ${isActive ? "active" : ""}`}
+                key={step.title}
+              >
+                <div className="step-icon">
+                  {isCompleted
+                    ? "✓"
+                    : isActive
+                    ? "●"
+                    : "○"}
+                </div>
+
+                <div className="step-content">
+                  <h4>{step.title}</h4>
+                  <p>{step.description}</p>
+                </div>
+
+                <span className="step-status">
+                  {isCompleted
+                    ? "완료"
+                    : isActive
+                    ? "분석 중"
+                    : "대기 중"}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {error ? (
+        <div className="analysis-error">
+          <strong>분석 서버에 연결할 수 없습니다.</strong>
+
+          <p>
+            백엔드 서버가 실행 중인지 확인한 후 다시 시도해주세요.
+          </p>
+        </div>
+      ) : (
+        <div className="analysis-footer">
+          <span className="loading-dot"></span>
+          {currentStepData.title}을(를) 분석하고 있습니다...
+        </div>
+      )}
+    </section>
+  );
 }
 
 export default Analysis;
