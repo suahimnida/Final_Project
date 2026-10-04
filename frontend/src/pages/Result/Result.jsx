@@ -154,8 +154,7 @@ function Result({ url, result }) {
 
           <h3>
             {verdictLabels[verdict] ||
-              verdict}
-          }
+              verdict} 
           </h3>
 
           <p>
